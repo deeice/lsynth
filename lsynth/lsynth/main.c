@@ -36,6 +36,8 @@ int skip_synthesized(FILE *dat, char *line, int sizeof_line)
   int rc;
   char *nonwhite;
 
+  nonwhite = line + strspn(line, " \t");
+
   if (strcmp(nonwhite,"0 SYNTHESIZED BEGIN\n") == 0) {
     int rc;
 
@@ -339,9 +341,9 @@ int main(int argc, char* argv[])
   int   rc = 0;
   int  synthcount = 0;
   int  synthonly = 0;
-  int  subfiles = 1;
+  int  subfiles = 0;
 
-  printf("LSynth version 2.0 by Kevin Clague, kevin_clague@yahoo.com\n");
+  printf("LSynth version 2.1 by Kevin Clague, kevin_clague@yahoo.com\n");
 
   if (argc == 2 && strcmp(argv[1],"-v") == 0) {
     return 1;
