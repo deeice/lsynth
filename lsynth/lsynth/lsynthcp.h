@@ -20,26 +20,6 @@ typedef struct {
   int       attrib;
 } part_t;
 
-typedef struct {
-  part_t    part;
-  PRECISION radius;
-  int       inside;
-  int       was_cross;
-  int       cross;
-  PRECISION start_line[3];
-  PRECISION end_line[3];
-  PRECISION crossings[8][3];
-  int       n_crossings;
-  int       layer;
-
-  PRECISION start_angle[3];
-  PRECISION end_angle[3];
-  int       n_steps;
-  PRECISION s_angle;
-
-  int       constraint_type_n;
-} LSL_band_constraint;
-
 extern PRECISION hose_res_angle;
 extern PRECISION band_res;
 
@@ -62,5 +42,15 @@ output_line(
   PRECISION       l,
   char            *type);
 
+/************************************************************************
+ *
+ * Structures used to define the types of bands and hoses we can synthesize
+ * and the constraints we can use to describe them.
+ *
+ **********************************************************************/
+
+#define STRETCH 0
+#define FIXED   1
+#define FIXED3  2
 
 #endif

@@ -18,6 +18,16 @@
  * 0 SYNTH END
  */
 
+int           n_hose_types = 0;
+hose_attrib_t   hose_types[32];
+
+#define N_HOSE_TYPES n_hose_types
+
+/* In hoses, the attrib field in constraints, indicates that
+ * LSynth should turn the final constraint around to get everything
+ * to work correctly (e.g. flex-axle ends).
+ */
+
 /*
  * 0 SYNTH BEGIN DEFINE HOSE CONSTRAINTS
  * 1 <length> a b c  d e f  g h i  j k l <part>
@@ -25,300 +35,10 @@
  * 0 SYNTH END
  */
 
-#define STRETCH     0
-#define FIXED       1
+int    n_hose_constraints = 0;
+part_t   hose_constraints[64];
 
-typedef struct {
-  char     *type;
-  char     *descr;
-  int       fill;         // FIXED or STRETCH
-  PRECISION diameter;     // of cross section
-  PRECISION stiffness;    // stiffness
-  PRECISION twist;        // in degrees
-  part_t    end;          // LDraw part for end of hose
-  part_t    mid;          // LDraw part for mis section
-} hose_attrib_t;
-
-hose_attrib_t hose_type[] = {
-  {
-    "RIBBED_HOSE",
-    "Technic Ribbed Hose composed of 79.DAT and 80.DAT",
-    FIXED,            // fixed length segments
-    1,                // diameter
-    45,               // stiffness
-    0,                // twist
-    {
-      "79.DAT",     // end
-      {
-        { 1,0,0 },
-        { 0,1,0 },
-        { 0,0,1 }
-      }
-    },{
-      "80.DAT",     // mid
-      {
-        { 1,0,0 },
-        { 0,1,0 },
-        { 0,0,1 }
-      },
-      { 0, 0, 0 },
-      6.6,
-    }
-  },
-  {
-    "RUBBER_HOSE",
-    "Technic Rubber Hose composed of 755.DAT and 756.DAT",
-    FIXED,            // fixed length segments
-    1,                // diameter
-    30,               // stiffness
-    0,                // twist
-    {
-      "755.DAT",     // end
-      {
-        { 1,0,0 },
-        { 0,1,0 },
-        { 0,0,1 }
-      }
-    },{
-      "756.DAT",     // mid
-      {
-        { 1,0,0 },
-        { 0,1,0 },
-        { 0,0,1 }
-      },
-      { 0, 0, 0 },
-      4.5,
-    }
-  },
-  {
-    "STRING",
-    "String composed of STRING.DAT",
-    FIXED,            // fixed length segments
-    2.0,              // diameter
-    40,               // stiffness
-    10,               // twist
-    {
-      "STRING.DAT",   // end
-      {
-        {1, 0,0 },
-        {0, 0,1 },
-        {0,-1,0 }
-      }
-    },{
-      "STRING.DAT",   // mid
-      {
-        { 1, 0,0 },
-        { 0, 0,1 },
-        { 0,-1,0 }
-      },
-      { 0, 0, 0 },
-      2.0
-    }
-  },
-  {
-    "MINIFIG_CHAIN",
-    "Minifig chain composed of 209.DAT",
-    FIXED,            // fixed length segments
-    2.0,              // diameter
-    60,               // stiffness
-    90,               // twist
-    {
-      "209.DAT",   // end
-      {
-        {1, 0, 0 },
-        {0, 1, 0 },
-        {0, 0, 1 }
-      },
-    },{
-      "209.DAT",   // mid
-      {
-        { 1, 0, 0 },
-        { 0, 1, 0 },
-        { 0, 0, 1 }
-      },
-      { 0, 0, 0 },
-      12.0,
-    }
-  },
-  {
-    "PNEUMATIC_HOSE",
-    "Technic pneumatic hose",
-    STRETCH,          // stretchable segments
-    6.0,              // diameter
-    40,               // stiffness
-    0,                // twist
-    {
-      "LS20.DAT",     // end
-      {
-        { 1,0,0 },
-        { 0,1,0 },
-        { 0,0,1 }
-      }
-    },{
-      "LS21.DAT",     // mid
-      {
-        { 1,0,0 },
-        { 0,1,0 },
-        { 0,0,1 }
-      }
-    }
-  },
-  {
-    "ELECTRIC_CABLE",
-    "Technic electric cable",
-    STRETCH,          // stretchable segments
-    6.0,              // diameter
-    20,               // stiffness
-    0,                // twist
-    {
-      "LS10.DAT",     // end
-      {
-        { 0,0,1 },
-        { 0,1,0 },
-        {-1,0,0 }
-      }
-    },{
-      "LS10.DAT",     // mid
-      {
-        { 0,0,1 },
-        { 0,1,0 },
-        {-1,0,0 }
-      }
-    }
-  },
-  {
-    "FLEX_SYSTEM_HOSE_LD",
-    "Flex System hose (the more flexible version)",
-    STRETCH,          // stretchable segments
-    6.0,              // diameter
-    40,               // stiffness
-    0,                // twist
-    {
-      "76.DAT",     // end
-      {
-        { 1,0,0 },
-        { 0,1,0 },
-        { 0,0,1 }
-      }
-    },{
-      "4-4cyli.dat",// mid
-      {
-        { 4,0,0 },
-        { 0,1,0 },
-        { 0,0,4 }
-      }
-    }
-  },
-  {
-    "FLEX_SYSTEM_HOSE",
-    "Flex System hose (rigid)",
-    STRETCH,          // stretchable segments
-    6.0,              // diameter
-    40,               // stiffness
-    0,                // twist
-    {
-      "76.DAT",     // end
-      {
-        { 1,0,0 },
-        { 0,1,0 },
-        { 0,0,1 }
-      }
-    },{
-      "4-4cyli.dat",     // mid
-      {
-        { 4,0,0 },
-        { 0,1,0 },
-        { 0,0,4 }
-      }
-    }
-  },
-  {
-    "FLEX_SYSTEM_CABLE",
-    "Flex System cable",
-    STRETCH,          // stretchable segments
-    6.0,              // diameter
-    40,               // stiffness
-    0,                // twist
-    {
-      "4-4cyli.dat",     // end
-      {
-        { 1,0,0 },
-        { 0,1,0 },
-        { 0,0,1 }
-      }
-    },{
-      "4-4cyli.dat",     // mid
-      {
-        { 1,0,0 },
-        { 0,1,0 },
-        { 0,0,1 }
-      }
-    }
-  },
-  {
-    "FLEXIBLE_AXLE",
-    "Flex System axle without axle ends",
-    STRETCH,          // stretchable segments
-    6.0,              // diameter
-    70,               // stiffness
-    0,                // twist
-    {
-      "AXLE_1.DAT",     // end
-      {
-        { 1,0,0 },
-        { 0,1,0 },
-        { 0,0,1 }
-      }
-    },{
-      "AXLE_1.DAT",     // mid
-      {
-        { 1,0,0 },
-        { 0,1,0 },
-        { 0,0,1 }
-      }
-    }
-  },
-  {
-    "FIBER_OPTIC_CABLE",
-    "Fiber optic cable without large end",
-    STRETCH,          // stretchable segments
-    6.0,              // diameter
-    40,               // stiffness
-    0,                // twist
-    {
-      "LS32.DAT",     // end
-      {
-        {1,0,0 },
-        {0,1,0 },
-        {0,0,1 }
-      }
-    },{
-      "4-4cyli.DAT",     // mid
-      {
-        { 2,0,0 },
-        { 0,1,0 },
-        { 0,0,2 }
-      }
-    }
-  }
-};
-
-#define N_HOSE_TYPES (sizeof(hose_type)/sizeof(hose_type[0]))
-
-/* In hoses, the attrib field in constraints, indicates that
- * LSynth should turn the final constraint around to get everything
- * to work correctly (e.g. flex-axle ends).
- */
-
-part_t hose_constraints[] = {
-  { "LS00.DAT", {{1, 0, 0},{0, 1, 0},{ 0,0,1}}, { 0, 0, 0 }, 0 },
-  { "LS30.DAT", {{1, 0, 0},{0, 1, 0},{ 0,0,1}}, { 0, 0, 0 }, 0 },
-  { "LS40.DAT", {{1, 0, 0},{0, 1, 0},{ 0,0,1}}, { 0, 0, 0 }, 1 },
-  { "755.DAT",  {{1, 0, 0},{0, 1, 0},{ 0,0,1}}, { 0, 0, 0 }, 1 },
-};
-
-#define N_HOSE_CONSTRAINTS (sizeof(hose_constraints)/sizeof(hose_constraints[0]))
-
+#define N_HOSE_CONSTRAINTS n_hose_constraints
 
 void
 list_hose_types(void)
@@ -327,7 +47,7 @@ list_hose_types(void)
 
   printf("\n\nHose like synthesizable parts\n");
   for (i = 0; i < N_HOSE_TYPES; i++) {
-    printf("  %-20s %s\n",hose_type[i].type, hose_type[i].descr);
+    printf("  %-20s %s\n",hose_types[i].type, hose_types[i].descr);
   }
 }
 
@@ -348,7 +68,7 @@ hose_ini(void)
   int i;
 
   for (i = 0; i < N_HOSE_TYPES; i++) {
-    printf("%-20s = SYNTH BEGIN %s 16\n",hose_type[i].type, hose_type[i].type);
+    printf("%-20s = SYNTH BEGIN %s 16\n",hose_types[i].type, hose_types[i].type);
   }
 }
 
@@ -358,7 +78,7 @@ ishosetype(char *type)
   int i;
 
   for (i = 0; i < N_HOSE_TYPES; i++) {
-    if (strncmp(hose_type[i].type,type,strlen(hose_type[i].type)) == 0) {
+    if (strncmp(hose_types[i].type,type,strlen(hose_types[i].type)) == 0) {
       return 1;
     }
   }
@@ -377,6 +97,7 @@ ishoseconstraint(char *type)
   }
   return 0;
 }
+
 /*
  * a 1x1 brick is 20 LDU wide and 24 LDU high
  *
@@ -469,7 +190,7 @@ merge_segments_length(
     vectorsub3(d,segments[a].offset,segments[b].offset);
     l = vectorlen(d);
 
-    if (l < max) {
+    if (l + 0.5 < max) {
       b++;
     } else {
       a = b;
@@ -538,6 +259,7 @@ render_hose_segment(
   PRECISION reversed[3][3];
   PRECISION twist[3][3];
   PRECISION twisted[3][3];
+  char     *type;
 
   scale[0][0] = 1;
   scale[0][1] = 0;
@@ -581,7 +303,16 @@ render_hose_segment(
 
     scale[1][1] = l;
 
-    matrixmult3(scaled,hose->mid.orient,scale);
+    if (i == 0 && first) {
+      type = hose->start.type;
+      matrixmult3(scaled,hose->start.orient,scale);
+    } else if (i == n_segments-2 && last) {
+      type = hose->end.type;
+      matrixmult3(scaled,hose->end.orient,scale);
+    } else {
+      type = hose->mid.type;
+      matrixmult3(scaled,hose->mid.orient,scale);
+    }
 
     if (hose->fill == FIXED) {
       PRECISION angle = *total_twist * pi / 360;
@@ -599,7 +330,7 @@ render_hose_segment(
       reversed[0][0], reversed[0][1], reversed[0][2],
       reversed[1][0], reversed[1][1], reversed[1][2],
       reversed[2][0], reversed[2][1], reversed[2][2],
-      hose->mid.type);
+      type);
   }
 }
 
@@ -633,9 +364,12 @@ render_hose(
 
     for (i = 0; i < N_HOSE_CONSTRAINTS; i++) {
       if (strcmp(first.type,hose_constraints[i].type) == 0) {
-        PRECISION t[3][3];
-        matrixcp(t,first.orient);
-        matrixmult3(first.orient,hose_constraints[i].orient,t);
+        PRECISION v[3];
+
+        matrixmult(first.orient,hose_constraints[i].orient);
+
+        vectorrot3(v,hose_constraints[i].offset,first.orient);
+        vectoradd(first.offset,v);
         break;
       }
     }
@@ -644,12 +378,20 @@ render_hose(
 
     for (i = 0; i < N_HOSE_CONSTRAINTS; i++) {
       if (strcmp(second.type,hose_constraints[i].type) == 0) {
-        PRECISION t[3][3];
-        matrixcp(t,second.orient);
-        matrixmult3(second.orient,hose_constraints[i].orient,t);
+        PRECISION m[3][3];
+        PRECISION v[3];
+
+        matrixmult(second.orient,hose_constraints[i].orient);
+
         if (hose_constraints[i].attrib && c == n_constraints-2) {
-          matrixcp(t,second.orient);
-          matrixneg(second.orient,t);
+          matrixcp(m,second.orient);
+          matrixneg(second.orient,m);
+        }
+        vectorrot3(v,hose_constraints[i].offset,second.orient);
+        if (hose_constraints[i].attrib && c == n_constraints-2) {
+          vectorsub(second.offset,v);
+        } else {
+          vectoradd(second.offset,v);
         }
         break;
       }
@@ -681,7 +423,7 @@ render_hose(
       segments,n_segments,
       &total_twist,
       c ==0,
-      c == n_constraints-1,
+      c == n_constraints-2,
       output);
   }
 
@@ -700,10 +442,10 @@ synth_hose(
 {
   int i;
 
-  for (i = 0; i < sizeof(hose_type)/sizeof(hose_attrib_t); i++) {
-    if (strcmp(hose_type[i].type,type) == 0) {
+  for (i = 0; i < N_HOSE_TYPES; i++) {
+    if (strcmp(hose_types[i].type,type) == 0) {
       render_hose(
-        &hose_type[i],
+        &hose_types[i],
         n_constraints,constraints,
         hose_res_angle,
         ghost,

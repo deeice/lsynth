@@ -1,7 +1,7 @@
 #ifndef MATHLIB
 #define MATHLIB
 
-#define PRECISION double
+#define PRECISION float
 
 void        vectorcp(PRECISION dst[3],PRECISION src[3]);
 void      vectoradd3(PRECISION dst[3],PRECISION lft[3], PRECISION rht[3]);

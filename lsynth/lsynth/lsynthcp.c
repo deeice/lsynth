@@ -43,6 +43,45 @@ void strupper(char *s) {
     *p = toupper(*p);
   }
 }
+
+char *
+fgetline(
+  char *line,
+  int   len,
+  FILE *file)
+{
+  char *rc;
+  while (rc = fgets(line,len,file)) {
+    char caps[256];
+    char *nonwhite;
+
+    strcpy(caps,line);
+    strupper(caps);
+
+    nonwhite = caps + strspn(caps," \t");
+
+    if (strncmp(nonwhite,"0 ROTATION C",strlen("0 ROTATION C")) == 0 ||
+        strncmp(nonwhite,"0 COLOR",strlen("0 COLOR")) == 0) {
+      continue;
+    }
+
+    nonwhite = line + strspn(line," \t");
+    if (strncmp(nonwhite,"0 WRITE ",strlen("0 WRITE ")) == 0) {
+      strcpy(nonwhite + 2, nonwhite + strlen("0 WRITE "));
+    }
+    break;
+  }
+  return rc;
+}
+
+void
+strclean(char *str)
+{
+  if (strncmp(str,"0 WRITE ",strlen("0 WRITE ")) == 0) {
+    strcpy(str + 2, str + strlen("0 WRITE "));
+  }
+}
+
 //---------------------------------------------------------------------------
 
 /*
@@ -68,6 +107,231 @@ static int skip_rot(char *line, int n_line, FILE *dat, FILE *temp)
   return 0;
 }
 
+
+/*****************************************************************************
+ *
+ * Read in and parse up synthesis descriptions and constraints.
+ *
+ ****************************************************************************/
+
+int
+parse_descr(char *fullpath_progname)
+{
+  char filename[256];
+  FILE *mpd;
+  char line[256];
+
+  strcpy(filename,fullpath_progname);
+  {
+    char *l, *p;
+
+    for (p = filename; *p; *p++) {
+      if (*p == '\\') {
+        l = p;
+      }
+    }
+    *l = '\0';
+  }
+  strcat(filename,"\\lsynth.mpd");
+
+  mpd = fopen(filename,"r");
+
+  if (mpd == NULL) {
+    printf("Failed to open lsynth.mpd for reading\n");
+    return -1;
+  }
+
+  while(fgetline(line,sizeof(line),mpd)) {
+    char stretch[64];
+    char type[64];
+    int  d,st,i;
+    PRECISION s,t;
+
+    if (sscanf(line,"0 SYNTH BEGIN DEFINE %s HOSE %s %d %d %f\n",
+        type,stretch,&d,&st,&t) == 5) {
+      if (strcmp(stretch,"STRETCH") == 0) {
+        hose_types[n_hose_types].fill = STRETCH;
+      } else if (strcmp(stretch,"FIXED") == 0) {
+        hose_types[n_hose_types].fill = FIXED;
+      } else {
+        printf("Error: Unrecognized fill type %s for hose type %s.  Aborting\n",
+          stretch,type);
+        fclose(mpd);
+        return -1;
+      }
+
+      strcpy(hose_types[n_hose_types].type,type);
+      hose_types[n_hose_types].diameter = d;
+      hose_types[n_hose_types].stiffness = st;
+      hose_types[n_hose_types].twist = t;
+
+      for (i = 0; i < 3; i++) {
+        part_t *part;
+
+        if (i == 0) {
+          part = &hose_types[n_hose_types].start;
+        } else if (i == 1) {
+          part = &hose_types[n_hose_types].mid;
+        } else {
+          part = &hose_types[n_hose_types].end;
+        }
+
+        if (fgetline(line,sizeof(line),mpd)) {
+
+          int n;
+
+          n = sscanf(line,"1 %d %f %f %f %f %f %f %f %f %f %f %f %f %s\n",
+                &part->attrib,
+                &part->offset[0],    &part->offset[1],    &part->offset[2],
+                &part->orient[0][0], &part->orient[0][1], &part->orient[0][2],
+                &part->orient[1][0], &part->orient[1][1], &part->orient[1][2],
+                &part->orient[2][0], &part->orient[2][1], &part->orient[2][2],
+                 part->type);
+
+          if (n != 14) {
+            printf("Error: Failed to parse type one line.  Got this instead:\n");
+            printf(line);
+            fclose(mpd);
+            return -1;
+          }
+        } else {
+          printf("Error: Unexpected end of file\n");
+          fclose(mpd);
+          return -1;
+        }
+      }
+
+      if (fgetline(line,sizeof(line),mpd)) {
+        if (strcmp(line,"0 SYNTH END\n") != 0) {
+          printf("Error: Expected SYNTH END, got this instead\n");
+          printf(line);
+          fclose(mpd);
+          return -1;
+        }
+      } else {
+        printf("Error: Unexepcted end of file\n");
+        fclose(mpd);
+        return -1;
+      }
+      n_hose_types++;
+    } else if (strcmp(line,"0 SYNTH BEGIN DEFINE HOSE CONSTRAINTS\n") == 0) {
+      while(fgetline(line,sizeof(line),mpd)) {
+        part_t *part = &hose_constraints[n_hose_constraints];
+        if (sscanf(line,"1 %d %f %f %f %f %f %f %f %f %f %f %f %f %s\n",
+          &part->attrib,
+          &part->offset[0],    &part->offset[1],    &part->offset[2],
+          &part->orient[0][0], &part->orient[0][1], &part->orient[0][2],
+          &part->orient[1][0], &part->orient[1][1], &part->orient[1][2],
+          &part->orient[2][0], &part->orient[2][1], &part->orient[2][2],
+           part->type) == 14) {
+          n_hose_constraints++;
+        } else if (strcmp(line,"0 SYNTH END\n") == 0) {
+          break;
+        } else {
+          printf("Error: Failed to parse type one line.  Got this instead:\n");
+          printf(line);
+          fclose(mpd);
+          return -1;
+        }
+      }
+    } else if (sscanf(line,"0 SYNTH BEGIN DEFINE %s BAND %s %f %f\n",
+                 type,stretch,&s,&t) == 4) {
+      int n;
+
+      if (strcmp(stretch,"STRETCH") == 0) {
+        band_types[n_band_types].fill = STRETCH;
+        n = 2;
+      } else if (strcmp(stretch,"FIXED") == 0) {
+        band_types[n_band_types].fill = FIXED;
+        n = 2;
+      } else if (strcmp(stretch,"FIXED3") == 0) {
+        band_types[n_band_types].fill = FIXED3;
+        n = 4;
+      } else {
+        printf("Error: Unrecognized fill type %s for hose type %s.  Aborting\n",
+          stretch,type);
+        fclose(mpd);
+        return -1;
+      }
+
+      strcpy(band_types[n_band_types].type,type);
+      band_types[n_band_types].scale = s;
+      band_types[n_band_types].thresh = t;
+
+      for (i = 0; i < n; i++) {
+        part_t *part;
+
+        if (i == 0) {
+          part = &band_types[n_band_types].tangent;
+        } else if (i == 1) {
+          part = &band_types[n_band_types].arc;
+        } else if (i == 2) {
+          part = &band_types[n_band_types].start_trans;
+        } else {
+          part = &band_types[n_band_types].end_trans;
+        }
+
+        if (fgetline(line,sizeof(line),mpd)) {
+          if (sscanf(line,"1 %d %f %f %f %f %f %f %f %f %f %f %f %f %s\n",
+            &part->attrib,
+            &part->offset[0],    &part->offset[1],    &part->offset[2],
+            &part->orient[0][0], &part->orient[0][1], &part->orient[0][2],
+            &part->orient[1][0], &part->orient[1][1], &part->orient[1][2],
+            &part->orient[2][0], &part->orient[2][1], &part->orient[2][2],
+             part->type) != 14) {
+            printf("Error: Failed to parse type one line.  Got this instead:\n");
+            printf(line);
+            fclose(mpd);
+            return -1;
+          }
+        } else {
+          printf("Error: Unexpected end of file\n");
+          fclose(mpd);
+          return -1;
+        }
+      }
+
+      if (fgets(line,sizeof(line),mpd)) {
+        if (strcmp(line,"0 SYNTH END\n") != 0) {
+          printf("Error: Expected SYNTH END, got this instead\n");
+          printf(line);
+          fclose(mpd);
+          return -1;
+        }
+      } else {
+        printf("Error: Unexepcted end of file\n");
+        fclose(mpd);
+        return -1;
+      }
+      n_band_types++;
+
+    } else if (strcmp(line,"0 SYNTH BEGIN DEFINE BAND CONSTRAINTS\n") == 0) {
+      while(fgetline(line,sizeof(line),mpd)) {
+        part_t *part = &band_constraints[n_band_constraints];
+        if (sscanf(line,"1 %d %f %f %f %f %f %f %f %f %f %f %f %f %s\n",
+          &part->attrib,
+          &part->offset[0],    &part->offset[1],    &part->offset[2],
+          &part->orient[0][0], &part->orient[0][1], &part->orient[0][2],
+          &part->orient[1][0], &part->orient[1][1], &part->orient[1][2],
+          &part->orient[2][0], &part->orient[2][1], &part->orient[2][2],
+           part->type) == 14) {
+          n_band_constraints++;
+        } else if (strcmp(line,"0 SYNTH END\n") == 0) {
+          break;
+        } else {
+          printf("Error: Failed to parse type one line.  Got this instead:\n");
+          printf(line);
+          fclose(mpd);
+          return -1;
+        }
+      }
+    }
+  }
+
+  fclose(mpd);
+  return 0;
+}
+
 /*
  * Skip over results rom previous syntesis efforts.
  */
@@ -89,14 +353,6 @@ int skip_synthesized(FILE *dat, char *line, int sizeof_line)
     return -1;
   } else {
     return 0;
-  }
-}
-
-void
-strclean(char *str)
-{
-  if (strncmp(str,"0 WRITE ",strlen("0 WRITE ")) == 0) {
-    strcpy(str + 2, str + strlen("0 WRITE "));
   }
 }
 
@@ -378,19 +634,35 @@ int main(int argc, char* argv[])
   int   synthcount = 0;
   int   subfiles = 0;
 
+  /*
+   * Read in the descriptions and constraints for synthesis
+   */
+
+  if (parse_descr(argv[0])) {
+    return 1;
+  }
+
+  /*
+   * Output MLCad.ini for LSynth
+   */
+
   if (argc == 2 && strcmp(argv[1],"-m") == 0) {
     extern void hose_ini(void);
     extern void band_ini(void);
     char path[256];
     char *l,*p;
+    int i;
 
     strcpy(path,argv[0]);
-    for (p = path; *p; p++) {
-      if (*p == '\\') {
-        l = p;
+
+    for (i = 0; i < 2; i++) {
+      for (p = path; *p; p++) {
+        if (*p == '\\') {
+          l = p;
+        }
       }
+      *l = '\0';
     }
-    *l = '\0';
 
     printf("[LSYNTH]\n");
     printf("%%PATH = \"%s\"\n",path);
@@ -410,6 +682,10 @@ int main(int argc, char* argv[])
   if (argc == 2 && strcmp(argv[1],"-v") == 0) {
     return 1;
   }
+
+  /*
+   * Print out help display
+   */
 
   if (argc == 2 && strcmp(argv[1],"-h") == 0) {
     extern void list_hose_types(void);
@@ -454,6 +730,10 @@ int main(int argc, char* argv[])
     printf("%s: Failed to open file %s for writing\n",argv[0],dst_name);
     return -1;
   }
+
+  /*
+   * Scan the input file looking for synthesis specifications
+   */
 
   while (fgets(line,sizeof(line), dat)) {
 
@@ -520,6 +800,7 @@ int main(int argc, char* argv[])
       }
 
       // Close subfile and cleanup
+
       if (synth_name) {
         fclose(synthfile);
         free(synth_name);
@@ -543,6 +824,6 @@ int main(int argc, char* argv[])
   fclose(outfile);
 
   printf("LSynth complete\n");
-  return 1;
+  return 0;
 }
 

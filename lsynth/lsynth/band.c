@@ -13,283 +13,23 @@
  * 1 <len>  a b c  d e f  g h i  j k l "name"
  * 1 <len>  a b c  d e f  g h i  j k l "name"
  * 0 SYNTH END
- *
+ */
+
+int           n_band_types;
+band_attrib_t   band_types[32];
+
+#define N_BAND_TYPES n_band_types
+
+/*
  * 0 SYNTH BEGIN DEFINE BAND CONSTRAINTS
  * 1 <dia>  a b c  d e f  g h i  j k l  "name"
  * 0 SYNTH END
  */
 
-#define STRETCH 0
-#define FIXED   1
-#define FIXED3  2
+int    n_band_constraints;
+part_t   band_constraints[64];
 
-typedef struct {
-  char     *type;        // name of thing being specified (e.g. RUBBER_BAND)
-  char     *descr;
-  int       fill;        // method for synthesizing
-                         // FIXED - chain and tread are composed of fixed
-                         //         length parts
-                         // FIXED3 - special case for rubber tread.
-                         // STRETCH - for rubber bands
-  PRECISION scale;       // convert LDUs to number of parts
-  PRECISION delta;       // used to compute number of steps on arc
-  part_t    tangent;     // the part type used for tangent
-  part_t    arc;         // the part type used for going around constraints
-  part_t    start_trans; // for rubber treads, transition from arc to tangent
-  part_t    end_trans;   // for rubber treads, transition from tangent to arc
-} band_attrib_t;
-
-/*
- * TYPE: <name> <scale> <delta> <mode>
- * 1 <disp> <rot> <type
- */
-band_attrib_t band_types[] =
-{
-  {
-    "RUBBER_BAND","Technic rubber band (with circular cross section)",
-    STRETCH,
-    2.0,
-    1,
-    {
-      "4-4CYLI.DAT",
-      {
-        { 2,0,0 },
-        { 0,1,0 },
-        { 0,0,2 }
-      }
-    },
-    {
-      "4-4CYLI.DAT",
-      {
-        { 2,0,0 },
-        { 0,1,0 },
-        { 0,0,2 }
-      }
-    },
-  },
-  {
-    "RUBBER_BELT","Technic rubber belt (with square cross section)",
-    STRETCH,
-    2.0,
-    1,
-    {
-      "box4o8a.DAT",
-      {
-        { 1.414,0,1.414 },
-        {     0,1,0 },
-        {-1.414,0,1.414 }
-      }
-    },
-    {
-      "box4o8a.DAT",
-      {
-        { 1.414,0,1.414 },
-        {     0,1,0 },
-        {-1.414,0,1.414 }
-      }
-    },
-  },
-  {
-    "CHAIN","Technic chain composed of 3711.dat chain links",
-    FIXED,
-    1.0/16,
-    8,
-    { // tangent
-      "3711.DAT",
-      {
-        { 0, 1, 0 },
-        { 0, 0,-1 },
-        {-1, 0, 0 }
-      },
-      {
-        0, 0, 16
-      }
-    },
-    { // arc
-      "3711.DAT",
-      {
-        { 0, -1, 0 },
-        { 0,  0, 1 },
-        {-1,  0, 0 }
-      },
-      {
-        0, 0, 0
-      }
-    }
-  },
-  {
-    "PLASTIC_TREAD","Technic plastic tread composed of 3873.DAT tread links",
-    FIXED,
-    1.0/16,
-    8,
-    { // tangent
-      "3873.DAT",
-      {
-        {  0, 1, 0 },
-        {  0, 0,-1 },
-        { -1, 0, 0 }
-      },
-      {
-        0, 0, 16
-      }
-    },
-    { // arc
-      "3873.DAT",
-      {
-        { 0, -1, 0 },
-        { 0,  0, 1 },
-        { -1, 0, 0 }
-      },
-      {
-        0, 0, 0
-      }
-    }
-  },
-  {
-    "RUBBER_TREAD","Technic rubber tread composed of 680.DAT, 681.DAT and 682.DAT",
-    FIXED3,
-    1.0/20,
-    1,
-    {
-      "680.DAT",
-      {
-        { 0, -1, 0 },
-        { 1,  0, 0 },
-        { 0,  0, 1 }
-      },
-      {
-        0, 32, 0
-      }
-    },
-    {
-      "682.DAT",
-      {
-        { -0.342,  0.940, 0 },
-        { -0.940, -0.342, 0 },
-        {      0,      0, 1 }
-      },
-      {
-        0, 32, 0
-      }
-    },
-    {
-      "681.DAT",
-      {
-        { -0.342,  0.940, 0 },
-        { -0.940, -0.342, 0 },
-        {      0,      0, 1 }
-      },
-      {
-        0, 32, 0
-      }
-    },
-    {
-      "681.DAT",
-      {
-        {  0.342,   0.940, 0 },
-        {  0.940,  -0.342, 0 },
-        {      0,      0,  1 }
-      },
-      {
-        0, 32, 0
-      }
-    },
-  }
-};
-
-#define N_BAND_TYPES (sizeof(band_types)/sizeof(band_types[0]))
-
-struct {
-  char     *type;         // LDraw part name
-  char     *descr;
-  PRECISION radius;       // Radius of circular part
-  PRECISION orient[3][3]; // How to orient it
-  PRECISION offset[3];    // How much to offset it.
-} constraint_type[] = {
-
-  // bushings/pulleys
-
-  {    "3736.DAT", "Technic Pulley Large",
-                   45, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "4185.DAT", "Technic Wedge Belt Wheel",
-                   29, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "6539.DAT", "Technic Transmission Driving Ring",
-                   15, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "2983.DAT", "Electric Technic Micromotor Pulley",
-                   13, {{1, 0, 0},{0,0, 1},{ 0,-1,0}}, { 0, 0, -2}},
-  {   "4265A.DAT", "Technic Bush 1/2 Type I",
-                    9, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {   "4265B.DAT", "Technic Bush 1/2 Type II",
-                    9, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {   "4265C.DAT", "Technic Bush 1/2 Smooth",
-                    9, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "3713.DAT", "Technic Bush",
-                    9, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "2736.DAT", "Technic Axle Towball",
-                    6, {{0, 0, 1},{0,1, 0},{-1,0,0}}, { 0, 0, 2}},
-  {    "6628.DAT",  "Technic Friction Pin with Towball",
-                    6, {{0, 0, 1},{0,1, 0},{-1,0,0}}, { 0, 0, 2}},
-  {   "32007.DAT", "Technic Tread Sprocket Wheel",
-                   32, {{1, 0, 0},{0,1, 0},{ 0,0,1}}, { 0, 32, 0}},
-  {   "32089.DAT", "Technic Tread Sprocket Wheel Thin",
-                   32, {{0,0,1},{0,1,0},{-1,0,0}}},
-  // axles
-
-  {    "3704.DAT",  "Technic Axle 2",
-                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  {   "32062.DAT",  "Technic Axle 2 Notched",
-                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  {    "4519.DAT",  "Technic Axle 3",
-                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  {    "6587.DAT",  "Technic Axle 3 with Stud",
-                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  {    "3705.DAT",  "Technic Axle 4",
-                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  { "3705C01.DAT",  "Technic Axle 4 Threaded",
-                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  {   "32073.DAT",  "Technic Axle 5",
-                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  {    "3706.DAT",  "Technic Axle 6",
-                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  {    "3707.DAT",  "Technic Axle 8",
-                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  {    "3737.DAT",  "Technic Axle 10",
-                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  { "3737C01.DAT",  "Technic Axle 10 Threaded",
-                    8, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "3708.DAT",  "Technic Axle 12",
-                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  // axle joiner
-
-  {   "6538A.DAT",  "Technic Axle Joiner",
-                    9, {{0, 0, 1},{0,1, 0},{ 0,0,1}}},
-  // gears
-
-  {   "73071.DAT", "Technic Differential",
-                   35, {{1, 0, 0},{0,1, 0},{ 0,0,1}}, { 0, 0,19}},
-  {    "6573.DAT", "Technic Differential New",
-                   30, {{1, 0, 0},{0,1, 0},{ 0,0,1}}, { 0, 0, 30}},
-  {    "4019.DAT", "Technic Gear 16 Tooth",
-                   18, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "6542.DAT", "Technic Gear 16 Tooth with Clutch",
-                   18, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "3648.DAT", "Technic Gear 24 Tooth",
-                   30, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {   "60C01.DAT", "Technic Gear 24 Tooth",
-                   30, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {   "3650A.DAT", "Technic Gear 24 Tooth Crown",
-                   30, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "3649.DAT", "Technic Gear 40 Tooth",
-                   50, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "2855.DAT", "Technic Turntable Top",
-                   71, {{1, 0, 0},{0,0,-1},{ 0,1,0}}, { 0, 0,-10}},
-  {   "48451.DAT", "Technic Turntable New with Hole Top ",
-                   71, {{1, 0, 0},{0,0,-1},{ 0,1,0}}, { 0, 0,19}},
-  {    "LS00.DAT", "~LSynth Constraint",
-                    1, {{1, 0, 0},{0,0,-1},{ 0,1,0}}},
-};
-
-#define N_BAND_CONSTRAINTS (sizeof(constraint_type)/sizeof(constraint_type[0]))
+#define N_BAND_CONSTRAINTS n_band_constraints
 
 void band_ini(void)
 {
@@ -330,7 +70,7 @@ isbandconstraint(char *type)
   int i;
 
   for (i = 0; i < N_BAND_CONSTRAINTS; i++) {
-    if (strcmp(constraint_type[i].type,type) == 0) {
+    if (strcmp(band_constraints[i].type,type) == 0) {
       return 1;
     }
   }
@@ -343,8 +83,8 @@ list_band_constraints(void)
   int i;
 
   printf("\n\nBand type synthesis constraints\n");
-  for (i = 0; i < sizeof(constraint_type)/sizeof(constraint_type[0]); i++) {
-    printf("    %11s %s\n",constraint_type[i].type,constraint_type[i].descr);
+  for (i = 0; i < N_BAND_CONSTRAINTS; i++) {
+    printf("    %11s\n",band_constraints[i].type);
   }
 }
 
@@ -454,7 +194,7 @@ calc_angles(
       ta = angle - 2*pi*(1-f);
       dx = k->radius*cos(ta) + k->part.offset[0] - last_x;
       dy = k->radius*sin(ta) + k->part.offset[1] - last_y;
-      if (sqrt(dx*dx+dy*dy) < type->delta) {
+      if (sqrt(dx*dx+dy*dy) < type->thresh) {
         break;
       }
     }
@@ -471,7 +211,7 @@ calc_angles(
       ta = angle - 2*pi*(1-f);
       dx = k->radius*cos(ta) + k->part.offset[0] - last_x;
       dy = k->radius*sin(ta) + k->part.offset[1] - last_y;
-      if (sqrt(dx*dx+dy*dy) < type->delta) {
+      if (sqrt(dx*dx+dy*dy) < type->thresh) {
         break;
       }
     }
@@ -765,14 +505,14 @@ int draw_arc_line(
         //       constraint's offset (for things like technic turntable top,
         //       where the gear plane does not go through the origin.
 
-        vectoradd( part.offset,constraint_type[f_constraint->constraint_type_n].offset);
+        vectoradd( part.offset,band_constraints[f_constraint->band_constraint_n].offset);
 
         //   5.  Orient tangent part based on the orientation of the first
         //       constraint's orientation (for things like technic turntable
         //       who's gear plane is perpendicular to the plane of say the 24T
         //       gears.
 
-        vectorrot( part.offset,constraint_type[f_constraint->constraint_type_n].orient);
+        vectorrot( part.offset,band_constraints[f_constraint->band_constraint_n].orient);
 
         //   6.  Orient the tangent part offsetation back to the absolute 3D
         //       offsetation.
@@ -790,7 +530,7 @@ int draw_arc_line(
 
         matrixcp(tm,part.orient);
         matrixmult3(part.orient,
-                    constraint_type[f_constraint->constraint_type_n].orient,
+                    band_constraints[f_constraint->band_constraint_n].orient,
                     tm);
 
         //   9.  Now rotate the part back into its correct orientation in 3D
@@ -936,15 +676,15 @@ int draw_arc_line(
       //       constraint's offset (for things like technic turntable top,
       //       where the gear plane does not go through the origin.)
 
-      vectoradd(part.offset,constraint_type[f_constraint->constraint_type_n].offset);
-      vectoradd(part.offset,constraint_type[f_constraint->constraint_type_n].offset);
+      vectoradd(part.offset,band_constraints[f_constraint->band_constraint_n].offset);
+      vectoradd(part.offset,band_constraints[f_constraint->band_constraint_n].offset);
 
       //   5.  Orient arc part based on the orientation of the first
       //       constraint's orientation (for things like technic turntable
       //       who's gear plane is perpendicular to the plane of say the 24T
       //       gears.)
 
-      vectorrot(part.offset,constraint_type[f_constraint->constraint_type_n].orient);
+      vectorrot(part.offset,band_constraints[f_constraint->band_constraint_n].orient);
 
       //   6.  Orient the arc part offsetation back to the absolute 3D
       //       offsetation.
@@ -962,7 +702,7 @@ int draw_arc_line(
 
       matrixcp(tm,part.orient);
       matrixmult3(part.orient,
-                  constraint_type[f_constraint->constraint_type_n].orient,
+                  band_constraints[f_constraint->band_constraint_n].orient,
                   tm);
 
       //   9.  Now rotate the part back into its correct orientation in 3D
@@ -1052,11 +792,11 @@ rotate_constraints(
  * the inverse of the first constraint's orientation.
  *
  * Some of the gears' are oriented in the X/Y plane, while other gears are
- * oriented in the X/Z plane.  The constraint_type array above, describes each of the
+ * oriented in the X/Z plane.  The band_constraints array above, describes each of the
  * supported constraint types, and their orientation.  We multiply all the
- * constraints by the first constraint's constraint_type orientation.
+ * constraints by the first constraint's band_constraints orientation.
  *
- * Also, in some cases, some of the constraint types described in constraint_type
+ * Also, in some cases, some of the constraint types described in band_constraints
  * need to be offset to get the place where the band should hit onto the
  * X/Y plane.
  */
@@ -1113,11 +853,11 @@ synth_band(
 
       // search the constraints table
 
-      for (k = 0; k < sizeof(constraint_type)/sizeof(constraint_type[0]); k++) {
-        if (strcmp(constraints[i].part.type,constraint_type[k].type) == 0) {
-          constraints[i].constraint_type_n = k;
+      for (k = 0; k < N_BAND_CONSTRAINTS; k++) {
+        if (strcmp(constraints[i].part.type,band_constraints[k].type) == 0) {
+          constraints[i].band_constraint_n = k;
 
-          constraints[i].radius = constraint_type[k].radius;
+          constraints[i].radius = band_constraints[k].attrib;
           break;
         }
       }
@@ -1163,7 +903,7 @@ synth_band(
    */
 
   rotate_constraints(constraints,n_constraints+1,
-    constraint_type[constraints[first].constraint_type_n].orient);
+    band_constraints[constraints[first].band_constraint_n].orient);
 
   showconstraints(output,constraints,n_constraints,15);
 
@@ -1174,7 +914,7 @@ synth_band(
   for (i = 0; i <= n_constraints; i++) {
     if (constraints[i].radius) {
       vectorsub(constraints[i].part.offset,
-        constraint_type[constraints[i].constraint_type_n].offset);
+        band_constraints[constraints[i].band_constraint_n].offset);
     }
   }
 

@@ -9,6 +9,23 @@
 extern "C" {
 #endif
 
+typedef struct {
+  char      type[256];
+  char      descr[256];
+  int       fill;         // FIXED or STRETCH
+  PRECISION diameter;     // of cross section
+  PRECISION stiffness;    // stiffness
+  PRECISION twist;        // in degrees
+  part_t    start;        // LDraw part for start of hose
+  part_t    mid;          // LDraw part for mid section
+  part_t    end;          // LDraw part for end of hose
+} hose_attrib_t;
+
+extern hose_attrib_t hose_types[];
+extern int n_hose_types;
+extern part_t hose_constraints[];
+extern int n_hose_constraints;
+
 void list_hose_types(      void);
 void list_hose_constraints(void);
 void hose_ini(             void);

@@ -1,0 +1,401 @@
+0 FILE LSynth definition file
+0 LSynth definitions
+0 Name: LSynth.mpd
+0 Kevin L. Clague
+0 Unofficial Model
+0 //
+0 // This file specifies hose and band synthesis definitions, as well as
+0 // the constraints for both hose and bands.  This file is basically an
+0 // MPD file that contains four types of files:
+0 //   hose type definitions
+0 //   hose type constraint list
+0 //   band type definitions
+0 //   band type constraint list
+0 //
+0 // The format for defining a new type of BAND is:
+0 //
+0 // 0 SYNTH BEGIN DEFINE <band_type> BAND <fill> <scale> <thresh>
+0 // 1 <color> <x> <y> <z> <a> <b> <c> <d> <e> <f> <g> <h> <i> tangent_part
+0 // 1 <color> <x> <y> <z> <a> <b> <c> <d> <e> <f> <g> <h> <i> arc_part
+0 // 0 SYNTH END
+0 // 
+0 //   <band_type>   is a name you make up.
+0 //   <fill>        can be STRETCH, FIXED, FIXED3
+0 //                 FIXED means that the synthesized result is made up of
+0 //                 fixed size elements.  CHAIN for example is made up of
+0 //                 individual fixed length chain links.
+0 //
+0 //                 STRETCH means that the synthesized result is made up of
+0 //                 cross sections that are scaled as needed.  For example, on
+0 //                 rubber bands, the band portion that goes from pulley to 
+0 //                 pulley (the tangent parts), is one single piece of band
+0 //                 cross section that is stretched to go from pulley to
+0 //                 pulley.
+0 //   <scale>       for FIXED and FIXED3 fill types, scale tells us how to
+0 //                 convert a distance in LDU to the number of mid elements
+0 //                 needed to cover that distance.
+0 //                   n_parts = (ldu_distance * scale) + 0.5)
+0 //   <thresh>      is used to decide when to stop wrapping stuff around a
+0 //                 given constraint.
+0 //
+0 //   tangent_part  this is the part type used to span the distance betwen
+0 //                 two gears.
+0 //   arc_part      this is the part type used to wrap around constraints
+0 //                 as needed.
+0 //
+0 //   <x> <y> <z>   these are x,y, and z offsets used to properly displace
+0 //                 the parts in the synthesis process.
+0 //   <a> thru <i>  these are the orientation/scaling values used to 
+0 //                 properly orient and stretch the parts in the synthesis
+0 //                 process.
+0 //
+0 // For BANDs with the FILL3 fill type use two parts in addition to the
+0 // tangent_part and arc_part.  These two extra parts are used to transistion
+0 // from tangent to arc, and arc to tangent.  Currently these are only used
+0 // for RUBBER_TREAD.
+0 //
+0 // The format for describing BAND constraints is:
+0 //
+0 //  0 SYNTH BEGIN DEFINE HOSE CONSTRAINTS
+0 //  1 <flip> <x> <y> <z> <a> <b> <c> <d> <e> <f> <g> <h> <i> <part>
+0 //  0 SYNTH END
+0 //
+0 //    <flip>       indicates that the constraint at the end of the hose has
+0 //                 the opposite orientation from the start of the hose.  This
+0 //                 is useful for 755.DAT on RUBBER_HOSE, or LS40.DAT on
+0 //                 flexible axles.
+0 //    <x> <y> <z>  reserved for future use.
+0 //    <a> thru <i> reserved for future use.
+0 //    <part>       name of LDraw part used as a constraint.
+0 // 
+0 // The format for defining a new type of HOSE is:
+0 //
+0 //  0 SYNTH BEGIN DEFINE <hose_type> HOSE <fill> <diameter> <stiffness> <twist>
+0 //  1 <len> <x> <y> <z> <a> <b> <c> <d> <e> <f> <g> <h> <i> start_part
+0 //  1 <len> <x> <y> <z> <a> <b> <c> <d> <e> <f> <g> <h> <i> mid_part
+0 //  1 <len> <x> <y> <z> <a> <b> <c> <d> <e> <f> <g> <h> <i> end_part
+0 //  0 SYNTH END
+0 //    <hose_type>  is a name you make up.
+0 //    <fill>       can be one of two keywords: FIXED or STRETCH
+0 //    <diameter>   this describes the diameter of the hose, and is used
+0 //                 by STRETCH type hoses.  It is used only to determine how
+0 //                 long to extend stretched hose cross sections so that hose
+0 //                 segments overlap at their boundaries.
+0 //    <stiffness>  this controls how much the hose is willing to bend at the
+0 //                 beginning and end of the hose.  Larger numbers indicate
+0 //                 stiffer hoses.
+0 //    <twist>      this specifies how much to rotate components used when
+0 //                 synthesizing FIXED hoses.  For MINIFIG_CHAIN, the twist
+0 //                 is 90 (degrees), to alternate the angle of the chain links.
+0 //                 Typically this field is zero.
+0 //    start_part   this is the first part used to synthesize the hose.  It is
+0 //                 used only once.
+0 //    end_part     this is the last part used to synthesize the hose.  It is
+0 //                 used only once.
+0 //    mid_part     this part is used to synthesize the bulk of the hose.
+0 //    <len>        this describes the length associated with fixed length
+0 //                 parts.
+0 //    <x> <y> <z>  these are used to offset synthesis components as part of
+0 //                 the final synthesis process of placing parts in 3D space.
+0 //    <a> thru <i> these are the orientations used to make all the start,
+0 //                 mid, and end parts all have the same orientation in the
+0 //                 synthesis process.
+0 //
+0 //  The format for describing BAND constraints is:
+0 //
+0 //  0 SYNTH BEGIN DEFINE BAND CONSTRAINTS
+0 //  1 <radius> <x> <y> <z> <a> <b> <c> <d> <e> <f> <g> <h> <i> <part>
+0 //  0 SYNTH END
+0 //
+0 //    <radius>     this describes the radius of the constraint <part>.
+0 //    <x> <y> <z>  these are x,y and z offsets used to properly place
+0 //                 arc parts that wrap around the constraint.  Typlically
+0 //                 only <z> used  
+0 //    <a> thru <i> these are used to orient all constraints' gear planes/
+0 //                 pulley planes into the same orientation.  Technic
+0 //                 turntable's gear plane is not parallel to the technic
+0 //                 gear family plane, so <a> thru <i> are used to rotate
+0 //                 technic turntables into the same orientation as gears.
+0 //                 Once rotated, technic turntable's gear plane is parallel
+0 //                 but not coincident to the technic gear plane.  Applying
+0 //                 <x> <y> <z> to the turntable part makes the gear plane
+0 //                 coincident with the technic gear plane.
+0 //    <part>       this is the name of the ldraw part used as a constraint.
+0 //
+0 // Below are the actual descriptions of hoses, bands and constraints.
+0 
+0
+0 FILE ELECTRIC_CABLE.ldr
+0 ELECTRIC_CABLE SYNTHESIS DEFINITION
+0 Name: ELECTRIC_CABLE.ldr
+0 Author: Kevin L. Clague
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE ELECTRIC_CABLE HOSE STRETCH 9 20 0
+0 ROTATION CENTER 0 0 0 1 "Custom" 
+0 ROTATION CONFIG 0 0
+1 0 0 0 0 0 0 1 0 1 0 -1 0 0 LS10.DAT
+1 0 0 0 0 0 0 1 0 1 0 -1 0 0 LS10.DAT
+1 0 0 0 0 0 0 1 0 1 0 -1 0 0 LS10.DAT
+0 SYNTH END
+0 
+0
+0 FILE FIBER_OPTIC_CABLE.ldr
+0 FIBER_OPTIC_CABLE SYNTHESIS DEFINITION
+0 Name: FIBER_OPTIC_CABLE.ldr
+0 Author: Kevin L. Clague
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE FIBER_OPTIC_CABLE HOSE STRETCH 2 40 0
+0 ROTATION CENTER 0 0 0 1 "Custom" 
+0 ROTATION CONFIG 0 0
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 4-4cyli.dat
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 4-4cyli.dat
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS32.DAT
+0 SYNTH END
+0 
+0
+0 FILE FLEX_SYSTEM_CABLE.ldr
+0 FLEX_SYSTEM_CABLE SYNTHESIS DEFINITION
+0 Name: FLEX_SYSTEM_CABLE.ldr
+0 Author: Kevin L. Clague
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE FLEX_SYSTEM_CABLE HOSE STRETCH 2 40 0
+0 ROTATION CENTER 0 0 0 1 "Custom" 
+0 ROTATION CONFIG 0 0
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 4-4cyli.dat
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 4-4cyli.dat
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 4-4cyli.dat
+0 SYNTH END
+0 
+0
+0 FILE FLEX_SYSTEM_HOSE.ldr
+0 FLEX_SYSTEM_HOSE SYNTHESIS DEFINITION
+0 Name: FLEX_SYSTEM_HOSE_LD.ldr
+0 Author: Kevin L. Clague
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE FLEX_SYSTEM_HOSE HOSE STRETCH 8 40 0
+0 ROTATION CENTER 0 0 0 1 "Custom" 
+0 ROTATION CONFIG 0 0
+1 0 0 0 0 -1 0 0 0 -1 0 0 0 1 76.DAT
+1 0 0 0 0 4 0 0 0 1 0 0 0 4 4-4cyli.dat
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 76.DAT
+0 SYNTH END
+0 
+0
+0 FILE FLEX_SYSTEM_HOSE_LD.ldr
+0 FLEX_SYSTEM_HOSE SYNTHESIS DEFINITION
+0 Name: FLEX_SYSTEM_HOSE_LD.ldr
+0 Author: Kevin L. Clague
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE FLEX_SYSTEM_HOSE HOSE STRETCH 8 40 0
+0 ROTATION CENTER 0 0 0 1 "Custom" 
+0 ROTATION CONFIG 0 0
+1 0 0 0 0 -1 0 0 0 -1 0 0 0 1 76.DAT
+1 0 0 0 0 4 0 0 0 1 0 0 0 4 4-4cyli.dat
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 76.DAT
+0 SYNTH END
+0 
+0
+0 FILE FLEXIBLE_AXLE.ldr
+0 FLEXIBLE_AXLE SYNTHESIS DEFINITION
+0 Name: FLEXIBLE_AXLE.ldr
+0 Author: Kevin L. Clague
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE FLEXIBLE_AXLE HOSE STRETCH 12 40 0
+0 ROTATION CENTER 0 0 0 1 "Custom" 
+0 ROTATION CONFIG 0 0
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 axle_1.dat
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 axle_1.dat
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 axle_1.dat
+0 SYNTH END
+0 
+0
+0 FILE MINIFIG_CHAIN.ldr
+0 MINIFIG_CHAIN SYNTHESIS DEFINITION
+0 Name: MINIFIG_CHAIN.ldr
+0 Author: Kevin L. Clague
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE MINIFIG_CHAIN HOSE FIXED 2 0 90
+0 ROTATION CENTER 0 0 0 1 "Custom" 
+0 ROTATION CONFIG 0 0
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 209.DAT
+1 12 0 0 0 1 0 0 0 1 0 0 0 1 209.DAT
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 209.DAT
+0 SYNTH END
+0 
+0
+0 FILE PNEUMATIC_HOSE.ldr
+0 PNEUMATIC_HOSE SYNTHESIS DEFINITION
+0 Name: PNEUMATIC_HOSE.ldr
+0 Author: Kevin L. Clague
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE PNEUMATIC_HOSE HOSE STRETCH 12 40 0
+0 ROTATION CENTER 0 0 0 1 "Custom" 
+0 ROTATION CONFIG 0 0
+1 0 0 0 0 -1 0 0 0 -1 0 0 0 1 LS20.DAT
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS21.DAT
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS20.DAT
+0 WRITE SYNTH END
+0 
+0
+0 FILE RIBBED_HOSE.ldr
+0 WRITE RIBBED_HOSE SYNTHESIS DEFINITION
+0 Name: RUBBER_BAND.ldr
+0 WRITE Author: Kevin L. Clague
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE RIBBED_HOSE HOSE FIXED 1 40 0
+0 ROTATION CENTER 0 0 0 1 "Custom" 
+0 ROTATION CONFIG 0 0
+1 0 0 0 0 -1 0 0 0 -1 0 0 0 1 79.DAT
+1 6 0 0 0 -1 0 0 0 -1 0 0 0 1 80.DAT
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 79.DAT
+0 SYNTH END
+0 
+0
+0 FILE RUBBER_HOSE.ldr
+0 RUBBER_HOSE SYNTHESIS DEFINITION
+0 Name: RUBBER_HOSE.ldr
+0 Author: Kevin L. Clague
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE RUBBER_HOSE HOSE FIXED 1 30 0
+0 ROTATION CENTER 0 0 0 1 "Custom" 
+0 ROTATION CONFIG 0 0
+1 0 0 0 0 -1 0 0 0 -1 0 0 0 1 755.DAT
+1 4 0 0 0 1 0 0 0 1 0 0 0 1 756.DAT
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 755.DAT
+0 SYNTH END
+0 
+0
+0 FILE STRING.ldr
+0 STRING SYNTHESIS DEFINITION
+0 Name: STRING.ldr
+0 Author: Kevin L. Clague
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE STRING HOSE FIXED 2 10 10
+0 ROTATION CENTER 0 0 0 1 "Custom" 
+0 ROTATION CONFIG 0 0
+1 0 0 0 0 1 0 0 0 0 1 0 -1 0 STRING.DAT
+1 2 0 0 0 1 0 0 0 0 1 0 -1 0 STRING.DAT
+1 0 0 0 0 1 0 0 0 0 1 0 -1 0 STRING.DAT
+0 SYNTH END
+0 
+0
+0 FILE HOSE_CONSTRAINTS.ldr
+0 LSYNTH HOSE CONSTRAINTS LIST
+0 Name: HOSE_CONSTRAINTS.ldr
+0 Author: Kevin L. Clague
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE HOSE CONSTRAINTS
+0 ROTATION CENTER 0 0 0 1 "Custom" 
+0 ROTATION CONFIG 0 0
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS00.DAT
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS30.DAT
+1 1 0 0 0 1 0 0 0 1 0 0 0 1 LS40.DAT
+1 1 0 0 0 1 0 0 0 1 0 0 0 1 755.DAT
+0 SYNTH END
+0 
+0
+0 FILE CHAIN.ldr
+0 CHAIN SYNTHESIS DEFINITION
+0 Name: CHAIN.ldr
+0 Author: Kevin L. Clague
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE CHAIN BAND FIXED 0.0625 8
+0 ROTATION CENTER 0 0 0 1 "Custom" 
+0 ROTATION CONFIG 0 0
+1 0 0 0 16 0 1 0 0 0 -1 -1 0 0 3711.DAT
+1 0 0 0 0 0 -1 0 0 0 1 -1 0 0 3711.DAT
+0 SYNTH END
+0 
+0
+0 FILE RUBBER_BAND.ldr
+0 RUBBER_BAND SYNTHESIS DEFINITION
+0 Name: RUBBER_BAND.ldr
+0 Author: Kevin L. Clague
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE RUBBER_BAND BAND STRETCH 2 1
+0 ROTATION CENTER 0 0 0 1 "Custom" 
+0 ROTATION CONFIG 0 0
+1 0 0 0 0 2 0 0 0 1 0 0 0 2 4-4cyli.dat
+1 0 0 0 0 2 0 0 0 1 0 0 0 2 4-4cyli.dat
+0 SYNTH END
+0 
+0
+0 FILE RUBBER_BELT.ldr
+0 RUBBER_BELT SYNTHESIS DEFINITION
+0 Name: RUBBER_BELT.ldr
+0 Author: Kevin L. Clague
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE RUBBER_BELT BAND STRETCH 2 1
+0 ROTATION CENTER 0 0 0 1 "Custom" 
+0 ROTATION CONFIG 0 0
+1 0 0 0 0 1.41421 0 1.41421 0 1 0 -1.41421 0 1.41421 box4o8a.DAT
+1 0 0 0 0 1.41421 0 1.41421 0 1 0 -1.41421 0 1.41421 box4o8a.DAT
+0 SYNTH END
+0 
+0
+0 FILE PLASTIC_TREAD.ldr
+0 PLASTIC_TREAD SYNTHESIS DEFINITION
+0 Name: PLASTIC_TREAD.ldr
+0 Author: Kevin L. Clague
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE PLASTIC_TREAD BAND FIXED 0.0625 8
+0 ROTATION CENTER 0 0 0 1 "Custom" 
+0 ROTATION CONFIG 0 0
+1 0 0 0 16 0 1 0 0 0 -1 -1 0 0 3873.DAT
+1 0 0 0 0 0 -1 0 0 0 1 -1 0 0 3873.DAT
+0 SYNTH END
+0 
+0
+0 FILE RUBBER_TREAD.ldr
+0 RUBBER_TREAD SYNTHESIS DEFINITION
+0 Name: RUBBER_TREAD.ldr
+0 Author: Kevin L. Clague
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE RUBBER_TREAD BAND FIXED3 0.05 1
+0 ROTATION CENTER 0 0 0 1 "Custom" 
+0 ROTATION CONFIG 0 0
+1 0 0 32 0 0 -1 0 1 0 0 0 0 1 680.DAT
+1 0 0 32 0 -0.342 0.94 0 -0.94 -0.342 0 0 0 1 682.DAT
+1 0 0 32 0 -0.342 0.94 0 -0.94 -0.342 0 0 0 1 681.DAT
+1 0 0 32 0 0.342 0.94 0 0.94 -0.342 0 0 0 1 681.DAT
+0 SYNTH END
+0 
+0
+0 FILE BAND_CONSTRAINTS.ldr
+0 LSYNTH BAND CONSTRAINTS LIST
+0 Name: BAND_CONSTRAINTS.ldr
+0 Author: Kevin L. Clague
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE BAND CONSTRAINTS
+0 ROTATION CENTER 0 0 0 1 "Custom" 
+0 ROTATION CONFIG 0 0
+1 45 0 0 0 1 0 0 0 1 0 0 0 1 3736.DAT
+1 29 0 0 0 1 0 0 0 1 0 0 0 1 4185.DAT
+1 15 0 0 0 1 0 0 0 1 0 0 0 1 6539.DAT
+1 9 0 0 0 1 0 0 0 1 0 0 0 1 4265C.DAT
+1 9 0 0 0 1 0 0 0 1 0 0 0 1 4265A.DAT
+1 9 0 0 0 1 0 0 0 1 0 0 0 1 4265B.DAT
+1 6 0 0 4 0 0 -1 0 1 0 1 0 0 2736.DAT
+1 6 0 -0.5 4 0 0 -1 0 1 0 1 0 0 6628.DAT
+1 13 0 0 -4 1 0 0 0 0 1 0 -1 0 2983.DAT
+1 32 0 0 0 0 0 1 0 1 0 -1 0 0 32089.DAT
+1 32 0 0 0 1 0 0 0 1 0 0 0 1 32007.DAT
+1 8 0 0 0 0 0 1 0 1 0 -1 0 0 32062.DAT
+1 9 0 0 0 1 0 0 0 1 0 0 0 1 6538A.DAT
+1 35 0 0 21 -1 0 0 0 1 0 0 0 -1 73071.DAT
+1 30 0 0 30 -1 0 0 0 1 0 0 0 -1 6573.DAT
+1 50 0 0 0 1 0 0 0 1 0 0 0 1 3649.DAT
+1 1 0 0 1 1 0 0 0 0 -1 0 1 0 LS00.DAT
+1 10 0 0 0 1 0 0 0 1 0 0 0 1 3647.DAT
+1 18 0 0 0 1 0 0 0 1 0 0 0 1 4019.DAT
+1 18 0 0 0 1 0 0 0 1 0 0 0 1 6542.DAT
+1 30 0 0 0 1 0 0 0 1 0 0 0 1 3648.DAT
+1 30 0 0 0 1 0 0 0 1 0 0 0 1 60C01.DAT
+1 30 0 0 0 1 0 0 0 1 0 0 0 1 3650A.DAT
+1 30 0 0 0 1 0 0 0 1 0 0 0 1 3648A.DAT
+1 71 0 0 -20 1 0 0 0 0 1 0 -1 0 48451.DAT
+1 71 0 0 9 1 0 0 0 0 1 0 -1 0 2855.DAT
+0 SYNTH END
+0 
+0
+0
