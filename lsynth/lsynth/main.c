@@ -19,21 +19,13 @@ static int skip_rot(char *line, int n_line, FILE *dat, FILE *temp)
 {
   char *nonwhite;
 
-  for (nonwhite = line; *nonwhite != '\0'; nonwhite++) {
-    if (*nonwhite != ' ') {
-      break;
-    }
-  }
+  nonwhite = line + strspn(line, " \t");
 
   while (strncmp(nonwhite,"0 ROTATION C",strlen("0 ROTATION C")) == 0) {
     fputs(line,temp);
     fgets(line,n_line,dat);  /* FIXME: check fgets rc */
     strupper(line);
-    for (nonwhite = line; *nonwhite != '\0'; nonwhite++) {
-      if (*nonwhite != ' ') {
-        break;
-      }
-    }
+    nonwhite = line + strspn(line, " \t");
   }
 
   return 0;
@@ -49,11 +41,7 @@ int skip_synthesized(FILE *dat, char *line, int sizeof_line)
 
     while (fgets(line,sizeof(line),dat)) {
       strupper(line);
-      for (nonwhite = line; *nonwhite != '\0'; nonwhite++) {
-        if (*nonwhite != ' ') {
-          break;
-        }
-      }
+      nonwhite = line + strspn(line, " \t");
       if (strcmp(nonwhite,"0 SYNTHESIZED END\n") == 0) {
         return 0;
       }
@@ -104,29 +92,17 @@ int synth_tube_like(
   while (fgets(line,sizeof(line), dat)) {
     strupper(line);
 
-    for (nonwhite = line; *nonwhite != '\0'; nonwhite++) {
-      if (*nonwhite != ' ') {
-        break;
-      }
-    }
+    nonwhite = line + strspn(line, " \t");
 
     skip_rot(line,sizeof(line),dat,temp);
 
-    for (nonwhite = line; *nonwhite != '\0'; nonwhite++) {
-      if (*nonwhite != ' ') {
-        break;
-      }
-    }
+    nonwhite = line + strspn(line, " \t");
 
     if (strncmp(nonwhite,"0 GHOST ",strlen("0 GHOST ")) == 0) {
       ghost = 1;
       nonwhite += strlen("0 GHOST ");
 
-      for ( ; *nonwhite != '\0'; nonwhite++) {
-        if (*nonwhite != ' ') {
-          break;
-        }
-      }
+      nonwhite += strspn(nonwhite, " \t");
     }
 
     if (sscanf(nonwhite,"1 %d %f %f %f %f %f %f %f %f %f %f %f %f %s",
@@ -175,11 +151,7 @@ int synth_tube_like(
 
   if (rc == 0) {
 
-    for (nonwhite = line; *nonwhite != '\0'; nonwhite++) {
-      if (*nonwhite != ' ') {
-        break;
-      }
-    }
+    nonwhite = line + strspn(line, " \t");
 
     if (strcmp(nonwhite,"0 SYNTH END\n") == 0 ||
         strcmp(nonwhite,"0 WRITE SYNTH END\n") == 0) {
@@ -228,29 +200,17 @@ int synth_band_like(
   while (fgets(line,sizeof(line), dat)) {
     strupper(line);
 
-    for (nonwhite = line; *nonwhite != '\0'; nonwhite++) {
-      if (*nonwhite != ' ') {
-        break;
-      }
-    }
+    nonwhite = line + strspn(line, " \t");
 
     skip_rot(line,sizeof(line),dat,temp);
 
-    for (nonwhite = line; *nonwhite != '\0'; nonwhite++) {
-      if (*nonwhite != ' ') {
-        break;
-      }
-    }
+    nonwhite = line + strspn(line, " \t");
 
     if (strncmp(nonwhite,"0 GHOST ",strlen("0 GHOST ")) == 0) {
       ghost = 1;
       nonwhite += strlen("0 GHOST ");
 
-      for ( ; *nonwhite != '\0'; nonwhite++) {
-        if (*nonwhite != ' ') {
-          break;
-        }
-      }
+      nonwhite += strspn(nonwhite, " \t");
     }
 
     if (sscanf(nonwhite,"1 %d %f %f %f %f %f %f %f %f %f %f %f %f %s",
@@ -312,11 +272,7 @@ int synth_band_like(
 
   if (rc == 0) {
 
-    for (nonwhite = line; *nonwhite != '\0'; nonwhite++) {
-      if (*nonwhite != ' ') {
-        break;
-      }
-    }
+    nonwhite = line + strspn(line, " \t");
 
     if (strcmp(nonwhite,"0 SYNTH END\n") == 0 ||
         strcmp(nonwhite,"0 WRITE SYNTH END\n") == 0) {
@@ -329,16 +285,61 @@ int synth_band_like(
 }
 
 
+//---------------------------------------------------------------------------
+char * stripquotes(char *s)
+{
+  char *p;
+  int i;
+  
+  // Strip away leading whitespace (spaces and tabs).
+  s += strspn(s, " \t");
+
+  // Remove leading quotes
+  if (*s == '\"')
+    s++;
+
+  // Allocate memory so we can modify the end of the string.
+  s = strdup(s);
+  
+  // Eliminate trailing whitespace
+#if 0
+#include <libgen.h>
+  if (i = strrspn(s, " \t"))
+    s[i] = '\0';
+#else
+  for (p = s + (strlen(s)-1); p >= s; p--)
+  {
+    if ((*p == ' ') || (*p == '\t'))
+      *p = 0;
+    else
+      break;
+  }
+#endif
+  
+  // Remove trailing quotes.
+  if ((p = strrchr(s, '\"')) != NULL)
+    *p = 0;
+
+  return(s);
+}
+
+//---------------------------------------------------------------------------
 #pragma argsused
 int main(int argc, char* argv[])
 {
   char *dat_name = argv[1];
   char *dst_name = argv[2];
-  FILE *temp;
+  char *synth_name = NULL;
+  char filename[512];
+  FILE *outfile;
+  FILE *synthfile;
   FILE *dat;
   char line[512];
   char *nonwhite;
   int   rc = 0;
+  int  synthcount = 0;
+  int  synthonly = 0;
+  int  subfiles = 1;
 
   printf("LSynth version 2.0 by Kevin Clague, kevin_clague@yahoo.com\n");
 
@@ -358,26 +359,25 @@ int main(int argc, char* argv[])
     return -1;
   }
 
-  temp = fopen(dst_name,"w");
+  outfile = fopen(dst_name,"w");
 
-  if (temp == NULL) {
+  if (outfile == NULL) {
     printf("%s: Failed to open file %s for writing\n",argv[0],dst_name);
     return -1;
   }
 
+  // Consider using L3fgets() to avoid OS dependent line termination issues.
   while (fgets(line,sizeof(line), dat)) {
 
     int format;
 
+    if (!synthonly)
+      fputs(line,outfile); // Copy line to output file before uppercasing it.
+
     strupper(line);
 
-    for (nonwhite = line; *nonwhite != '\0'; nonwhite++) {
-      if (*nonwhite != ' ') {
-        break;
-      }
-    }
-
-    fputs(line,temp);
+    // Strip away leading whitespace (spaces and tabs).
+    nonwhite = line + strspn(line, " \t");
 
     format = (strncmp(nonwhite,
                      "0 SYNTH BEGIN ",
@@ -385,16 +385,60 @@ int main(int argc, char* argv[])
 
     format += strncmp(nonwhite,
                        "0 WRITE SYNTH BEGIN ",
-                       strlen("0 WRITE SYNTH BEGIN ")) == 0;;
+                       strlen("0 WRITE SYNTH BEGIN ")) == 0;
 
     if (format) {
 
       int type_index;
+      char *option;
 
       if (format == 1) {
         nonwhite += strlen("0 WRITE SYNTH BEGIN ");
       } else {
         nonwhite += strlen("0 SYNTH BEGIN ");
+      }
+
+      synthfile = outfile; // By default synth data goes to main outfile.
+      synthcount++; // Count the synth parts.
+
+      // We may be writing synth data to separate subfiles.
+      if (subfiles)
+      {
+	// Check if the subfile is named in the SYNTH BEGIN line.
+	if (option = strstr(nonwhite, "NAME="))
+	{
+	  option += strlen("NAME=");
+	  // Allocate memory for name, strip quotes and trailing spaces.
+	  synth_name = stripquotes(option); 
+	}
+	// Otherwise just number the subfile.  Use lsynthN.ldr for stdout?
+	else
+	{
+	  char *p;
+
+	  // Remove the extension from dat_name if not already gone.
+	  if ((p = strrchr(dst_name, '.')) != NULL)
+	    *p = 0;
+	  // Build the new subfilename.
+	  sprintf(filename, "%s%d.ldr", dst_name, synthcount);
+	  synth_name = strdup(filename);
+	}
+
+	synthfile = fopen(synth_name,"w");
+	if (synthfile == NULL) {
+	  printf("%s: Failed to open file %s for writing\n",argv[0],synth_name);
+	  return -1;
+	}
+
+	fputs(line, synthfile); // Warning, this line has been uppercased
+      }
+      if (option = strstr(nonwhite, "LENGTH="))
+      {
+	option += strlen("LENGTH=");
+      }
+      if (option = strstr(nonwhite, "UNITS="))
+      {
+	option += strlen("UNITS=");
       }
 
       /* check to see if it is a known synth command */
@@ -407,7 +451,7 @@ int main(int argc, char* argv[])
           rc = synth_tube_like(
                  nonwhite,
                  nonwhite + strlen(tube_types[type_index]),
-                 dat,temp);
+                 dat,synthfile);
           break;
         }
       }
@@ -422,14 +466,22 @@ int main(int argc, char* argv[])
           rc = synth_band_like(
                  nonwhite,
                  nonwhite + strlen(band_types[type_index]),
-                 dat,temp);
+                 dat,synthfile);
           break;
-        }
+	}
+      }
+
+      // Close subfile and clean up.
+      if (synth_name)
+      {
+	fclose(synthfile);
+	free(synth_name);
+	synth_name = NULL;
       }
     }
   }
   fclose(dat);
-  fclose(temp);
+  fclose(outfile);
 
   printf("LSynth complete\n");
   return 1;
