@@ -37,6 +37,7 @@
 #include "ctype.h"
 #include "string.h"
 
+//---------------------------------------------------------------------------
 void strupper(char *s) {
   char *p;
   for (p = s; *p; p++) {
@@ -44,6 +45,48 @@ void strupper(char *s) {
   }
 }
 
+//---------------------------------------------------------------------------
+/* If this code works, it was written by Lars C. Hassing. */
+/* If not, I don't know who wrote it.                     */
+
+/* Like fgets, except that 1) any line ending is accepted (\n (unix),
+\r\n (DOS/Windows), \r (Mac (OS9)) and 2) Str is ALWAYS zero terminated
+(even if no line ending was found) */
+//---------------------------------------------------------------------------
+char *L3fgets(char *Str, int n, FILE *fp)
+{
+   register int   c;
+   int            nextc;
+   register char *s = Str;
+
+   while (--n > 0)
+   {
+      if ((c = getc(fp)) == EOF)
+         break;
+      if (c == '\032')
+         continue;              /* Skip CTRL+Z                               */
+      if (c == '\r' || c == '\n')
+      {
+         *s++ = '\n';
+         /* We got CR or LF, eat next character if LF or CR respectively */
+         if ((nextc = getc(fp)) == EOF)
+            break;
+         if (nextc == c || (nextc != '\r' && nextc != '\n'))
+            ungetc(nextc, fp);  /* CR-CR or LF-LF or ordinary character      */
+         break;
+      }
+      *s++ = c;
+   }
+   *s = 0;
+
+   /* if (ferror(fp)) return NULL; if (s == Str) return NULL; */
+   if (s == Str)
+      return NULL;
+
+   return Str;
+}
+
+//---------------------------------------------------------------------------
 char *
 fgetline(
   char *line,
@@ -51,7 +94,7 @@ fgetline(
   FILE *file)
 {
   char *rc;
-  while (rc = fgets(line,len,file)) {
+  while (rc = L3fgets(line,len,file)) {
     char caps[256];
     char *nonwhite;
 
@@ -74,6 +117,7 @@ fgetline(
   return rc;
 }
 
+//---------------------------------------------------------------------------
 void
 strclean(char *str)
 {
@@ -100,7 +144,7 @@ static int skip_rot(char *line, int n_line, FILE *dat, FILE *temp)
   while (strncmp(nonwhite,"0 ROTATION C",strlen("0 ROTATION C")) == 0 ||
          strncmp(nonwhite,"0 COLOR",strlen("0 COLOR")) == 0) {
     fputs(line,temp);
-    fgets(line,n_line,dat);  /* FIXME: check fgets rc */
+    L3fgets(line,n_line,dat);  /* FIXME: check L3fgets rc */
     strcpy(caps,line); strupper(caps); nonwhite = caps + strspn(caps," \t");
   }
 
@@ -125,14 +169,14 @@ parse_descr(char *fullpath_progname)
   {
     char *l, *p;
 
-    for (p = filename; *p; *p++) {
-      if (*p == '\\') {
-        l = p;
+    for (l = p = filename; *p; *p++) {
+      if ((*p == '\\') || (*p == '/')) {
+        l = p+1;
       }
     }
     *l = '\0';
   }
-  strcat(filename,"\\lsynth.mpd");
+  strcat(filename,"lsynth.mpd");
 
   mpd = fopen(filename,"r");
 
@@ -291,7 +335,7 @@ parse_descr(char *fullpath_progname)
         }
       }
 
-      if (fgets(line,sizeof(line),mpd)) {
+      if (L3fgets(line,sizeof(line),mpd)) {
         if (strcmp(line,"0 SYNTH END\n") != 0) {
           printf("Error: Expected SYNTH END, got this instead\n");
           printf(line);
@@ -344,7 +388,7 @@ int skip_synthesized(FILE *dat, char *line, int sizeof_line)
   if (strcmp(line,"0 SYNTHESIZED BEGIN\n") == 0) {
     int rc;
 
-    while (fgets(line,sizeof(line),dat)) {
+    while (L3fgets(line,sizeof(line),dat)) {
       strupper(line); nonwhite = line + strspn(line," \t");
       if (strcmp(nonwhite,"0 SYNTHESIZED END\n") == 0) {
         return 0;
@@ -389,7 +433,7 @@ int synth_hose_class(
 
   /* gather up the constraints */
 
-  while (fgets(line,sizeof(line), dat)) {
+  while (L3fgets(line,sizeof(line), dat)) {
     strcpy(caps,line); strupper(caps); nonwhite = caps + strspn(caps," \t");
 
     skip_rot(line,sizeof(line),dat,temp);
@@ -488,7 +532,7 @@ int synth_band_class(
 
   /* gather up the constraints */
 
-  while (fgets(line,sizeof(line), dat)) {
+  while (L3fgets(line,sizeof(line), dat)) {
     float a,b,c, d,e,f, g,h,i, j,k,l;
     char start_type[64];
     int t;
@@ -735,7 +779,7 @@ int main(int argc, char* argv[])
    * Scan the input file looking for synthesis specifications
    */
 
-  while (fgets(line,sizeof(line), dat)) {
+  while (L3fgets(line,sizeof(line), dat)) {
 
     fputs(line,outfile);
 
