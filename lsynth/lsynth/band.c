@@ -1,30 +1,36 @@
 /*
  * This is the LDRAW parts synthesis library.
- * By Kevin Clague
+ * By Kevin Clague and Don Heyse
  */
 
-#include "lsynth.h"
+#include "lsynthcp.h"
 #include "band.h"
-#include "tube.h"
+#include "hose.h"
 #include <float.h>
 
-#define FIXED   0
-#define FIXED3  1
-#define STRETCH 2
+/*
+ * 0 SYNTH BEGIN DEFINE BAND <fill> RUBBER_BAND "Descr" <scale> <thresh>
+ * 1 <len>  a b c  d e f  g h i  j k l "name"
+ * 1 <len>  a b c  d e f  g h i  j k l "name"
+ * 0 SYNTH END
+ *
+ * 0 SYNTH BEGIN DEFINE BAND CONSTRAINTS
+ * 1 <dia>  a b c  d e f  g h i  j k l  "name"
+ * 0 SYNTH END
+ */
+
+#define STRETCH 0
+#define FIXED   1
+#define FIXED3  2
 
 typedef struct {
-  char     *part;         // LDraw part type
-  PRECISION orient[3][3]; // how to orient/scale it into the result
-  PRECISION offset[3];    // how to displace it into the result
-} part_t;
-
-typedef struct {
-  char     *type;   // name of thing being specified (e.g. RUBBER_BAND)
-  int       fill;   // method for synthesizing
-                    // FIXED - chain and tread are composed of fixed
-                    //         length parts
-                    // FIXED3 - special case for rubber tread.
-                    // STRETCH - for rubber bands
+  char     *type;        // name of thing being specified (e.g. RUBBER_BAND)
+  char     *descr;
+  int       fill;        // method for synthesizing
+                         // FIXED - chain and tread are composed of fixed
+                         //         length parts
+                         // FIXED3 - special case for rubber tread.
+                         // STRETCH - for rubber bands
   PRECISION scale;       // convert LDUs to number of parts
   PRECISION delta;       // used to compute number of steps on arc
   part_t    tangent;     // the part type used for tangent
@@ -40,7 +46,7 @@ typedef struct {
 band_attrib_t band_types[] =
 {
   {
-    "RUBBER_BAND ",
+    "RUBBER_BAND","Technic rubber band (with circular cross section)",
     STRETCH,
     2.0,
     1,
@@ -62,7 +68,7 @@ band_attrib_t band_types[] =
     },
   },
   {
-    "RUBBER_BELT ",
+    "RUBBER_BELT","Technic rubber belt (with square cross section)",
     STRETCH,
     2.0,
     1,
@@ -84,7 +90,7 @@ band_attrib_t band_types[] =
     },
   },
   {
-    "CHAIN ",
+    "CHAIN","Technic chain composed of 3711.dat chain links",
     FIXED,
     1.0/16,
     8,
@@ -93,7 +99,7 @@ band_attrib_t band_types[] =
       {
         { 0, 1, 0 },
         { 0, 0,-1 },
-        { -1,0, 0 }
+        {-1, 0, 0 }
       },
       {
         0, 0, 16
@@ -104,7 +110,7 @@ band_attrib_t band_types[] =
       {
         { 0, -1, 0 },
         { 0,  0, 1 },
-        { -1, 0, 0 }
+        {-1,  0, 0 }
       },
       {
         0, 0, 0
@@ -112,7 +118,7 @@ band_attrib_t band_types[] =
     }
   },
   {
-    "PLASTIC_TREAD ",
+    "PLASTIC_TREAD","Technic plastic tread composed of 3873.DAT tread links",
     FIXED,
     1.0/16,
     8,
@@ -140,10 +146,10 @@ band_attrib_t band_types[] =
     }
   },
   {
-    "RUBBER_TREAD ",
+    "RUBBER_TREAD","Technic rubber tread composed of 680.DAT, 681.DAT and 682.DAT",
     FIXED3,
     1.0/20,
-    4,
+    1,
     {
       "680.DAT",
       {
@@ -188,64 +194,159 @@ band_attrib_t band_types[] =
         0, 32, 0
       }
     },
-  },
+  }
 };
+
+#define N_BAND_TYPES (sizeof(band_types)/sizeof(band_types[0]))
 
 struct {
   char     *type;         // LDraw part name
+  char     *descr;
   PRECISION radius;       // Radius of circular part
   PRECISION orient[3][3]; // How to orient it
   PRECISION offset[3];    // How much to offset it.
-} radiai[] = {
+} constraint_type[] = {
 
   // bushings/pulleys
 
-  {    "3736.DAT", 44, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "4185.DAT", 30, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "2983.DAT", 11, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "4265.DAT", 10, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {   "4265A.DAT", 10, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {   "4265B.DAT", 10, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {   "4265C.DAT", 10, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "13.DAT", 10, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "2736.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  {    "6628.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-
+  {    "3736.DAT", "Technic Pulley Large",
+                   45, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "4185.DAT", "Technic Wedge Belt Wheel",
+                   29, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "6539.DAT", "Technic Transmission Driving Ring",
+                   15, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "2983.DAT", "Electric Technic Micromotor Pulley",
+                   13, {{1, 0, 0},{0,0, 1},{ 0,-1,0}}, { 0, 0, -2}},
+  {   "4265A.DAT", "Technic Bush 1/2 Type I",
+                    9, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {   "4265B.DAT", "Technic Bush 1/2 Type II",
+                    9, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {   "4265C.DAT", "Technic Bush 1/2 Smooth",
+                    9, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "3713.DAT", "Technic Bush",
+                    9, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "2736.DAT", "Technic Axle Towball",
+                    6, {{0, 0, 1},{0,1, 0},{-1,0,0}}, { 0, 0, 2}},
+  {    "6628.DAT",  "Technic Friction Pin with Towball",
+                    6, {{0, 0, 1},{0,1, 0},{-1,0,0}}, { 0, 0, 2}},
+  {   "32007.DAT", "Technic Tread Sprocket Wheel",
+                   32, {{1, 0, 0},{0,1, 0},{ 0,0,1}}, { 0, 32, 0}},
+  {   "32089.DAT", "Technic Tread Sprocket Wheel Thin",
+                   32, {{0,0,1},{0,1,0},{-1,0,0}}},
   // axles
 
-  {    "3704.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  {   "32062.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  {    "4519.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  {    "6587.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  {    "3705.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  { "3705C01.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  {   "32073.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  {     "552.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  {    "3706.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  {    "3707.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  {    "3737.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-  { "3737C01.DAT",  4, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "3708.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
-
+  {    "3704.DAT",  "Technic Axle 2",
+                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  {   "32062.DAT",  "Technic Axle 2 Notched",
+                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  {    "4519.DAT",  "Technic Axle 3",
+                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  {    "6587.DAT",  "Technic Axle 3 with Stud",
+                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  {    "3705.DAT",  "Technic Axle 4",
+                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  { "3705C01.DAT",  "Technic Axle 4 Threaded",
+                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  {   "32073.DAT",  "Technic Axle 5",
+                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  {    "3706.DAT",  "Technic Axle 6",
+                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  {    "3707.DAT",  "Technic Axle 8",
+                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  {    "3737.DAT",  "Technic Axle 10",
+                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  { "3737C01.DAT",  "Technic Axle 10 Threaded",
+                    8, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "3708.DAT",  "Technic Axle 12",
+                    8, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
   // axle joiner
 
-  {   "6538A.DAT", 10, {{0, 0, 1},{0,1, 0},{ 0,0,1}}},
-
+  {   "6538A.DAT",  "Technic Axle Joiner",
+                    9, {{0, 0, 1},{0,1, 0},{ 0,0,1}}},
   // gears
 
-  {   "32007.DAT", 32, {{1, 0, 0},{0,1, 0},{ 0,0,1}}, { 0, 32, 0}},
-  {   "73071.DAT", 35, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "6573.DAT", 30, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "4019.DAT", 20, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "6542.DAT", 20, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "3648.DAT", 30, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {   "60C01.DAT", 30, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {   "3650A.DAT", 30, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "3649.DAT", 50, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
-  {    "2855.DAT", 73, {{1, 0, 0},{0,0,-1},{ 0,1,0}}, { -8, 0, 0}},
-  {    "6539.DAT", 20, {{1, 0, 0},{0,1, 0},{ 0,1,0}}},
-  {    "LS00.DAT",  1, {{1, 0, 0},{0,0,-1},{ 0,1,0}}},
+  {   "73071.DAT", "Technic Differential",
+                   35, {{1, 0, 0},{0,1, 0},{ 0,0,1}}, { 0, 0,19}},
+  {    "6573.DAT", "Technic Differential New",
+                   30, {{1, 0, 0},{0,1, 0},{ 0,0,1}}, { 0, 0, 30}},
+  {    "4019.DAT", "Technic Gear 16 Tooth",
+                   18, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "6542.DAT", "Technic Gear 16 Tooth with Clutch",
+                   18, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "3648.DAT", "Technic Gear 24 Tooth",
+                   30, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {   "60C01.DAT", "Technic Gear 24 Tooth",
+                   30, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {   "3650A.DAT", "Technic Gear 24 Tooth Crown",
+                   30, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "3649.DAT", "Technic Gear 40 Tooth",
+                   50, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "2855.DAT", "Technic Turntable Top",
+                   71, {{1, 0, 0},{0,0,-1},{ 0,1,0}}, { 0, 0,-10}},
+  {   "48451.DAT", "Technic Turntable New with Hole Top ",
+                   71, {{1, 0, 0},{0,0,-1},{ 0,1,0}}, { 0, 0,19}},
+  {    "LS00.DAT", "~LSynth Constraint",
+                    1, {{1, 0, 0},{0,0,-1},{ 0,1,0}}},
 };
+
+#define N_BAND_CONSTRAINTS (sizeof(constraint_type)/sizeof(constraint_type[0]))
+
+void band_ini(void)
+{
+  int i;
+
+  for (i = 0; i < N_BAND_TYPES; i++) {
+    printf("%-20s = SYNTH BEGIN %s 16\n",band_types[i].type, band_types[i].type);
+  }
+}
+
+void
+list_band_types(void)
+{
+  int i;
+
+  printf("\n\nBand type synthesizable parts\n");
+  for (i = 0; i < N_BAND_TYPES; i++) {
+    printf("  %-20s %s\n",band_types[i].type, band_types[i].descr);
+  }
+}
+
+int
+isbandtype(char *type)
+{
+  int i;
+
+  for (i = 0; i < N_BAND_TYPES; i++) {
+    if (strncmp(band_types[i].type,type,strlen(band_types[i].type)) == 0) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+int
+isbandconstraint(char *type)
+{
+  int i;
+
+  for (i = 0; i < N_BAND_CONSTRAINTS; i++) {
+    if (strcmp(constraint_type[i].type,type) == 0) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+void
+list_band_constraints(void)
+{
+  int i;
+
+  printf("\n\nBand type synthesis constraints\n");
+  for (i = 0; i < sizeof(constraint_type)/sizeof(constraint_type[0]); i++) {
+    printf("    %11s %s\n",constraint_type[i].type,constraint_type[i].descr);
+  }
+}
 
 void
 calc_crosses(
@@ -254,12 +355,12 @@ calc_crosses(
   int                 *layer,
   FILE *output)
 {
-  PRECISION xlk = k->end_line.loc.x - k->start_line.loc.x;
-  PRECISION ylk = k->end_line.loc.y - k->start_line.loc.y;
-  PRECISION xnm = m->end_line.loc.x - m->start_line.loc.x;
-  PRECISION ynm = m->end_line.loc.y - m->start_line.loc.y;
-  PRECISION xmk = m->start_line.loc.x - k->start_line.loc.x;
-  PRECISION ymk = m->start_line.loc.y - k->start_line.loc.y;
+  PRECISION xlk = k->end_line[0] - k->start_line[0];
+  PRECISION ylk = k->end_line[1] - k->start_line[1];
+  PRECISION xnm = m->end_line[0] - m->start_line[0];
+  PRECISION ynm = m->end_line[1] - m->start_line[1];
+  PRECISION xmk = m->start_line[0] - k->start_line[0];
+  PRECISION ymk = m->start_line[1] - k->start_line[1];
 
   PRECISION det = xnm*ylk - ynm*xlk;
   if (fabs(det) < ACCY) {
@@ -269,18 +370,18 @@ calc_crosses(
     PRECISION s = (xnm*ymk - ynm*xmk)*detinv;
     PRECISION t = (xlk*ymk - ylk*xmk)*detinv;
     if (s >= 0 && s <= 1.0 && t >= 0 && t <= 1.0) {
-      PRECISION x = k->start_line.loc.x + xlk*s;
-      PRECISION y = k->start_line.loc.y + ylk*s;
+      PRECISION x = k->start_line[0] + xlk*s;
+      PRECISION y = k->start_line[1] + ylk*s;
       if (k->n_crossings < 8) {
-        k->crossings[k->n_crossings].loc.x = x;
-        k->crossings[k->n_crossings].loc.y = y;
-        k->crossings[k->n_crossings].loc.z = 0;
+        k->crossings[k->n_crossings][0] = x;
+        k->crossings[k->n_crossings][1] = y;
+        k->crossings[k->n_crossings][2] = 0;
         k->n_crossings++;
       }
       if (m->n_crossings < 8) {
-        m->crossings[m->n_crossings].loc.x = x;
-        m->crossings[m->n_crossings].loc.y = y;
-        m->crossings[m->n_crossings].loc.z = 0;
+        m->crossings[m->n_crossings][0] = x;
+        m->crossings[m->n_crossings][1] = y;
+        m->crossings[m->n_crossings][2] = 0;
         m->n_crossings++;
       }
       if (k->layer == -1) {
@@ -309,19 +410,19 @@ calc_angles(
   PRECISION pi = 2*atan2(1,0);
 
   if (k->cross || ! k->inside) {
-    first_x = k->end_angle.loc.x;
-    first_y = k->end_angle.loc.y;
-    last_x  = k->start_angle.loc.x;
-    last_y  = k->start_angle.loc.y;
+    first_x = k->end_angle[0];
+    first_y = k->end_angle[1];
+    last_x  = k->start_angle[0];
+    last_y  = k->start_angle[1];
   } else {
-    first_x = k->start_angle.loc.x;
-    first_y = k->start_angle.loc.y;
-    last_x  = k->end_angle.loc.x;
-    last_y  = k->end_angle.loc.y;
+    first_x = k->start_angle[0];
+    first_y = k->start_angle[1];
+    last_x  = k->end_angle[0];
+    last_y  = k->end_angle[1];
   }
 
-  dx = (first_x - k->part.loc.x);
-  dy = (first_y - k->part.loc.y);
+  dx = (first_x - k->part.offset[0]);
+  dy = (first_y - k->part.offset[1]);
   dx /= k->radius;
   dy /= k->radius;
 
@@ -333,8 +434,6 @@ calc_angles(
 
   k->s_angle = angle;
 
-  n = type->scale * 2 * pi * k->radius + 0.5;
-
   if (type->fill == FIXED3) {
     PRECISION circ;
     if (angle < 0) {
@@ -342,7 +441,10 @@ calc_angles(
     }
     circ = angle*2*k->radius;
     k->n_steps = circ*type->scale+0.5;
-  } else {
+
+  } else if (type->fill == FIXED) {
+
+    n = type->scale * 2 * pi * k->radius + 0.5;
 
     // circumference
     for (i = 0; i < n; i++) {
@@ -350,13 +452,31 @@ calc_angles(
       f = i;
       f /= n;
       ta = angle - 2*pi*(1-f);
-      dx = k->radius*cos(ta) + k->part.loc.x - last_x;
-      dy = k->radius*sin(ta) + k->part.loc.y - last_y;
+      dx = k->radius*cos(ta) + k->part.offset[0] - last_x;
+      dy = k->radius*sin(ta) + k->part.offset[1] - last_y;
       if (sqrt(dx*dx+dy*dy) < type->delta) {
         break;
       }
     }
     k->n_steps = i+1;
+  } else {
+
+    n =  2 * pi * k->radius/band_res + 0.5;
+
+    // circumference
+    for (i = 0; i < n; i++) {
+      PRECISION f;
+      f = i;
+      f /= n;
+      ta = angle - 2*pi*(1-f);
+      dx = k->radius*cos(ta) + k->part.offset[0] - last_x;
+      dy = k->radius*sin(ta) + k->part.offset[1] - last_y;
+      if (sqrt(dx*dx+dy*dy) < type->delta) {
+        break;
+      }
+    }
+    k->n_steps = i+1;
+
   }
 }
 
@@ -453,8 +573,8 @@ int calc_tangent_line(
 
   /* rotate xk and yk up to -45 degrees */
 
-  xlk = l->part.loc.x - k->part.loc.x;
-  ylk = l->part.loc.y - k->part.loc.y;
+  xlk = l->part.offset[0] - k->part.offset[0];
+  ylk = l->part.offset[1] - k->part.offset[1];
 
   xlksq = xlk*xlk;
   ylksq = ylk*ylk;
@@ -483,7 +603,7 @@ int calc_tangent_line(
       deninv = 1.0/denom;
       a = (-rlk*xlk - ylk*root)*deninv;
       b = (-rlk*ylk + xlk*root)*deninv;
-      c = -(rk + a*k->part.loc.x + b*k->part.loc.y);
+      c = -(rk + a*k->part.offset[0] + b*k->part.offset[1]);
 
       /* we have the normalized form of the tangent line */
 
@@ -506,26 +626,26 @@ int calc_tangent_line(
         yo,
         f,
         g,
-        k->part.loc.x,
-        k->part.loc.y,
+        k->part.offset[0],
+        k->part.offset[1],
         k->radius,
-        &k->start_line.loc.x,
-        &k->start_line.loc.y);
-        k->start_line.loc.z = 0;
-        k->start_angle = k->start_line;
+       &k->start_line[0],
+       &k->start_line[1]);
+        k->start_line[2] = 0;
+      vectorcp(k->start_angle,k->start_line);
 
       intersect_line_circle_2D(
         xo,
         yo,
         f,
         g,
-        l->part.loc.x,
-        l->part.loc.y,
+        l->part.offset[0],
+        l->part.offset[1],
         l->radius,
-        &k->end_line.loc.x,
-        &k->end_line.loc.y);
-        k->end_line.loc.z = 0;
-        l->end_angle = k->end_line;
+       &k->end_line[0],
+       &k->end_line[1]);
+        k->end_line[2] = 0;
+      vectorcp(l->end_angle,k->end_line);
 
       // this means we need our previous neighbor's end line and our
       // start line to know the arc
@@ -534,82 +654,56 @@ int calc_tangent_line(
   return 0;
 }
 
-static void
-rotate_point3(
-  PRECISION t[3],
-  PRECISION r[3],
-  PRECISION m[3][3])
-{
-  t[0] = r[0]*m[0][0] + r[1]*m[0][1] + r[2]*m[0][2];
-  t[1] = r[0]*m[1][0] + r[1]*m[1][1] + r[2]*m[1][2];
-  t[2] = r[0]*m[2][0] + r[1]*m[2][1] + r[2]*m[2][2];
-}
-
 int draw_arc_line(
-  band_attrib_t *type,
-  LSL_band_constraint *f_constraint,
-  int color,
-  int draw_line,
-  FILE *output,
-  int   ghost,
-  LSL_part_usage *absolute)
+  band_attrib_t       *type,
+  LSL_band_constraint *constraint,
+  int                  color,
+  int                  draw_line,
+  FILE                *output,
+  int                  ghost,
+  part_t      *absolute,
+  LSL_band_constraint *f_constraint)
 {
-  PRECISION r;
   int       i,j,n;
-  PRECISION L1,L2;
-  PRECISION pi = 2*atan2(1,0);
-  PRECISION angle, at;
-  PRECISION f[3],s[3],rf[3],rs[3];
-  PRECISION orient[3][3];
-  PRECISION rot[3][3];
-  PRECISION roffset[3];
   PRECISION dx,dy,dz;
+  PRECISION L1,L2;
   int steps;
 
   if (draw_line) {
 
-    for (j = 0; j < f_constraint->n_crossings - 1; j++) {
+    for (j = 0; j < constraint->n_crossings - 1; j++) {
+      PRECISION orient[3][3];
 
       // determine the orientation of the part in the XY plane
 
-      dx = f_constraint->crossings[j+1].loc.x - f_constraint->crossings[j].loc.x;
-      dy = f_constraint->crossings[j+1].loc.y - f_constraint->crossings[j].loc.y;
-      dz = f_constraint->crossings[j+1].loc.z - f_constraint->crossings[j].loc.z;
+      dx = constraint->crossings[j+1][0] - constraint->crossings[j][0];
+      dy = constraint->crossings[j+1][1] - constraint->crossings[j][1];
+      dz = constraint->crossings[j+1][2] - constraint->crossings[j][2];
 
       L1 = sqrt(dx*dx + dy*dy);
       L2 = sqrt(dx*dx + dy*dy + dz*dz);
-
       if (L1 == 0) {
 
-        f_constraint->start_line.orient[0][0] = 1;
-        f_constraint->start_line.orient[1][0] = 0;
-        f_constraint->start_line.orient[2][0] = 0;
-        f_constraint->start_line.orient[0][1] = 0;
-        f_constraint->start_line.orient[1][1] = 1;
-        f_constraint->start_line.orient[2][1] = 0;
-        f_constraint->start_line.orient[0][2] = 0;
-        f_constraint->start_line.orient[1][2] = 0;
-        f_constraint->start_line.orient[2][2] = 1;
+        orient[0][0] = 1;
+        orient[1][0] = 0;
+        orient[2][0] = 0;
+        orient[0][1] = 0;
+        orient[1][1] = 1;
+        orient[2][1] = 0;
+        orient[0][2] = 0;
+        orient[1][2] = 0;
+        orient[2][2] = 1;
       } else {
-
-        f_constraint->start_line.orient[0][0] = dy/L1;
-        f_constraint->start_line.orient[1][0] = -dx/L1;
-        f_constraint->start_line.orient[2][0] = 0;
-        f_constraint->start_line.orient[0][1] = dx/L2;
-        f_constraint->start_line.orient[1][1] = dy/L2;
-        f_constraint->start_line.orient[2][1] = dz/L2;
-        f_constraint->start_line.orient[0][2] = -dx*dz/(L1*L2);
-        f_constraint->start_line.orient[1][2] = -dy*dz/(L1*L2);
-        f_constraint->start_line.orient[2][2] = L1/L2;
+        orient[0][0] =  dy/L1;  //  cos
+        orient[1][0] = -dx/L1;  //  sin
+        orient[2][0] =  0;
+        orient[0][1] =  dx/L2;  // -sin
+        orient[1][1] =  dy/L2;  //  cos
+        orient[2][1] =  dz/L2;
+        orient[0][2] = -dx*dz/(L1*L2);
+        orient[1][2] = -dy*dz/(L1*L2);
+        orient[2][2] =  L1/L2;
       }
-
-      // rotate the orientation of tangent line and part_orient
-
-      mat_mult(rot,f_constraint->start_line.orient,type->tangent.orient);
-
-      // rotate the offset by
-
-      rotate_point3(roffset,type->tangent.offset,rot);
 
       if (type->fill == STRETCH) {
         n = 1;
@@ -623,180 +717,349 @@ int draw_arc_line(
       }
 
       for (i = steps; i < n; i++) {
-        PRECISION loc[3];
-        PRECISION floc[3];
-        PRECISION trot[3][3];
+        part_t part;
+        PRECISION tm[3][3];
+        PRECISION foffset[3];
 
-        floc[0] = f_constraint->crossings[j].loc.x + dx * i / n - roffset[0];
-        floc[1] = f_constraint->crossings[j].loc.y + dy * i / n - roffset[1];
-        floc[2] = f_constraint->crossings[j].loc.z + dz * i / n - roffset[2];
-
-        rotate_point3(loc, floc,absolute->orient);
-
-        loc[0] += absolute->loc.x;
-        loc[1] += absolute->loc.y;
-        loc[2] += absolute->loc.z;
+        part = type->tangent;
 
         if (type->fill == STRETCH) {
           PRECISION scale[3][3];
-          PRECISION lrot[3][3];
           int i,j;
 
           for (i = 0; i < 3; i++) {
             for (j = 0; j < 3; j++) {
-              lrot[i][j] = rot[i][j];
               scale[i][j] = 0;
             }
           }
           scale[0][0] = 1;
           scale[1][1] = L2;
           scale[2][2] = 1;
-          mat_mult(rot,lrot,scale);
+          matrixmult(part.orient,scale);
         }
 
-        mat_mult(trot,absolute->orient,rot);
+        // We performed this to start:
+        //   1.  move the assembly so the first constraint is at the origin
+        //   2.  rotate offsetations about the inverse of the first constraint's
+        //       orientation bringing everything into the X/Y plane
+
+        // Now we're putting together the segments and putting them back into place
+        //   1.  multiply tangent part orientation times the orient
+        //       so we know how to orient the tangent part in the X/Y plane.
+        //   2.  rotate the tangent offsets into the X/Y plane.
+
+        matrixcp(tm,part.orient);
+        matrixmult3(part.orient,orient,tm);
+
+        vectorrot3(part.offset,type->tangent.offset,part.orient);
+
+        //   3.  Calculate the tangent part's offsetation in the X/Y plane
+
+        foffset[0] = constraint->crossings[j][0] + dx * i / n - part.offset[0];
+        foffset[1] = constraint->crossings[j][1] + dy * i / n - part.offset[1];
+        foffset[2] = constraint->crossings[j][2] + dz * i / n - part.offset[2];
+
+        vectorcp(part.offset,foffset);
+
+        //   4.  Reoffsetate the tangent part in the X/Y plane based on the first
+        //       constraint's offset (for things like technic turntable top,
+        //       where the gear plane does not go through the origin.
+
+        vectoradd( part.offset,constraint_type[f_constraint->constraint_type_n].offset);
+
+        //   5.  Orient tangent part based on the orientation of the first
+        //       constraint's orientation (for things like technic turntable
+        //       who's gear plane is perpendicular to the plane of say the 24T
+        //       gears.
+
+        vectorrot( part.offset,constraint_type[f_constraint->constraint_type_n].orient);
+
+        //   6.  Orient the tangent part offsetation back to the absolute 3D
+        //       offsetation.
+
+        vectorrot( part.offset,absolute->orient);
+
+        //   7.  Now add the absolute offsetation of the first constraint
+
+        vectoradd( part.offset,absolute->offset);
+
+        //   8.  Change the tangent part orientation based on the first
+        //       constraint's orientation (again for things like the
+        //       technic turntable top, where the gear plane is perpendicular
+        //       to the standard 24T gear's gear plane
+
+        matrixcp(tm,part.orient);
+        matrixmult3(part.orient,
+                    constraint_type[f_constraint->constraint_type_n].orient,
+                    tm);
+
+        //   9.  Now rotate the part back into its correct orientation in 3D
+        //       space.
+
+        matrixcp(tm,part.orient);
+        matrixmult3(part.orient,absolute->orient,tm);
 
         output_line(
           output,
           ghost,
           color,
-          loc[0],loc[1],loc[2],
-          trot[0][0],
-          trot[0][1],
-          trot[0][2],
-          trot[1][0],
-          trot[1][1],
-          trot[1][2],
-          trot[2][0],
-          trot[2][1],
-          trot[2][2],
-          type->tangent.part);
+          part.offset[0],part.offset[1],part.offset[2],
+          part.orient[0][0],
+          part.orient[0][1],
+          part.orient[0][2],
+          part.orient[1][0],
+          part.orient[1][1],
+          part.orient[1][2],
+          part.orient[2][0],
+          part.orient[2][1],
+          part.orient[2][2],
+          type->tangent.type);
       }
     }
   }
 
-  /* now for the arc */
+  // Create the arc
 
-  n = 2*pi*f_constraint->radius*type->scale + 0.5;
-  angle = f_constraint->s_angle;
+  {
+    PRECISION pi = 2*atan2(1,0);
+    PRECISION f[3];
 
-  f[0] = f_constraint->radius * cos(angle);
-  f[1] = f_constraint->radius * sin(angle);
-  f[2] = 0;
+    /* now for the arc */
 
-  if (type->fill == FIXED3) {
-    steps = f_constraint->n_steps + 2;
-  } else {
-    steps = f_constraint->n_steps;
-  }
+    if (type->fill == STRETCH) {
+      n = 2*pi*constraint->radius/band_res;
+    } else {
+      n = 2*pi*constraint->radius*type->scale;
+    }
 
-  for (i = 1; i < steps; i++) {
-    PRECISION loc[3];
-    PRECISION floc[3];
-    PRECISION trot[3][3];
-    part_t   *part;
+    // vector for the first arc part
+
+    f[0] = constraint->radius * cos(constraint->s_angle);
+    f[1] = constraint->radius * sin(constraint->s_angle);
+    f[2] = 0;
 
     if (type->fill == FIXED3) {
-       if (i == 1) {
-         part = &type->start_trans;
-       } else if (i+1 == steps) {
-         part = &type->end_trans;
-       } else {
-         part = &type->arc;
-       }
+      steps = constraint->n_steps + 2;
     } else {
-      part = &type->arc;
+      steps = constraint->n_steps;
     }
 
-    s[0] = f_constraint->radius * cos(angle + 2*pi*i/n);
-    s[1] = f_constraint->radius * sin(angle + 2*pi*i/n);
-    s[2] = 0;
+    for (i = 1; i < steps; i++) {
+      PRECISION orient[3][3];
+      PRECISION foffset[3];
+      PRECISION tm[3][3];
+      PRECISION s[3];
+      part_t    part;
 
-    dx = s[0] - f[0];
-    dy = s[1] - f[1];
-    dz = s[2] - f[2];
+      // for FIXED3 (e.g. rubber tread), the first and last segments are
+      // treated as transition pieces, otherwise just use arc parts
 
-    L1 = sqrt(dx*dx + dy*dy);
-    L2 = sqrt(dx*dx + dy*dy + dz*dz);
+      if (type->fill == FIXED3 && i == 1) {
+        part = type->start_trans;
+      } else if (type->fill == FIXED3 && i+1 == steps) {
+        part = type->end_trans;
+      } else {
+        part = type->arc;
+      }
 
-    if (L1 == 0) {
-      orient[0][0] =  1;
-      orient[1][0] =  0;
-      orient[2][0] =  0;
-      orient[0][1] =  0;
-      orient[1][1] =  1;
-      orient[2][1] =  0;
-      orient[0][2] =  0;
-      orient[1][2] =  0;
-      orient[2][2] =  1;
-    } else {
-      orient[0][0] =  dy/L1;
-      orient[1][0] = -dx/L1;
-      orient[2][0] =  0;
-      orient[0][1] =  dx/L2;
-      orient[1][1] =  dy/L2;
-      orient[2][1] =  dz/L2;
-      orient[0][2] = -dx*dz/(L1*L2);
-      orient[1][2] = -dy*dz/(L1*L2);
-      orient[2][2] =  L1/L2;
+      // rotate the arc part so it hugs the current constraint
+
+      s[0] = constraint->radius * cos(constraint->s_angle + 2*pi*i/n);
+      s[1] = constraint->radius * sin(constraint->s_angle + 2*pi*i/n);
+      s[2] = 0;
+
+      dx = s[0] - f[0];
+      dy = s[1] - f[1];
+      dz = s[2] - f[2];
+
+      L1 = sqrt(dx*dx + dy*dy);
+      L2 = sqrt(dx*dx + dy*dy + dz*dz);
+
+      if (L1 == 0) {
+        orient[0][0] =  1;
+        orient[1][0] =  0;
+        orient[2][0] =  0;
+        orient[0][1] =  0;
+        orient[1][1] =  1;
+        orient[2][1] =  0;
+        orient[0][2] =  0;
+        orient[1][2] =  0;
+        orient[2][2] =  1;
+      } else {
+        orient[0][0] =  dy/L1;
+        orient[1][0] = -dx/L1;
+        orient[2][0] =  0;
+        orient[0][1] =  dx/L2;
+        orient[1][1] =  dy/L2;
+        orient[2][1] =  dz/L2;
+        orient[0][2] = -dx*dz/(L1*L2);
+        orient[1][2] = -dy*dz/(L1*L2);
+        orient[2][2] =  L1/L2;
+      }
+
+      if (type->fill == STRETCH) {
+        PRECISION scale[3][3];
+        PRECISION angle = 2 * pi / n;
+        PRECISION l = type->scale*sin(angle);
+        int i,j;
+
+        for (i = 0; i < 3; i++) {
+          for (j = 0; j < 3; j++) {
+            scale[i][j] = 0;
+          }
+        }
+        scale[0][0] = 1;
+        scale[1][1] = L2+l;
+        scale[2][2] = 1;
+        matrixmult(part.orient,scale);
+      }
+
+      // Now we're putting together the segments and putting them back into place
+      //   1.  multiply arc part orientation times the orient
+      //       so we know how to orient the arc part in the X/Y plane.
+      //   2.  rotate the arc offsets into the X/Y plane.
+
+      matrixcp(tm,part.orient);
+      matrixmult3(part.orient,orient,tm);
+
+      vectorrot3(part.offset,type->arc.offset,part.orient);
+
+      //   3.  Calculate the arc part's offsetation in the X/Y plane
+
+      foffset[0] = f[0] + constraint->part.offset[0] - part.offset[0];
+      foffset[1] = f[1] + constraint->part.offset[1] - part.offset[1];
+      foffset[2] = f[2] + constraint->part.offset[2] - part.offset[2];
+
+      vectorcp(part.offset,foffset);
+
+      //   4.  Rotate the arc part in the X/Y plane based on the first
+      //       constraint's offset (for things like technic turntable top,
+      //       where the gear plane does not go through the origin.)
+
+      vectoradd(part.offset,constraint_type[f_constraint->constraint_type_n].offset);
+      vectoradd(part.offset,constraint_type[f_constraint->constraint_type_n].offset);
+
+      //   5.  Orient arc part based on the orientation of the first
+      //       constraint's orientation (for things like technic turntable
+      //       who's gear plane is perpendicular to the plane of say the 24T
+      //       gears.)
+
+      vectorrot(part.offset,constraint_type[f_constraint->constraint_type_n].orient);
+
+      //   6.  Orient the arc part offsetation back to the absolute 3D
+      //       offsetation.
+
+      vectorrot(part.offset,absolute->orient);
+
+      //   7.  Now add the absolute offsetation of the first constraint
+
+      vectoradd( part.offset,absolute->offset);
+
+      //   8.  Change the arc part orientation based on the first
+      //       constraint's orientation (again for things like the
+      //       technic turntable top, where the gear plane is perpendicular
+      //       to the standard 24T gear's gear plane)
+
+      matrixcp(tm,part.orient);
+      matrixmult3(part.orient,
+                  constraint_type[f_constraint->constraint_type_n].orient,
+                  tm);
+
+      //   9.  Now rotate the part back into its correct orientation in 3D
+      //       space.
+
+      matrixcp(tm,part.orient);
+      matrixmult3(part.orient,absolute->orient,tm);
+
+      output_line(
+        output,
+        ghost,
+        color,
+        part.offset[0],part.offset[1],part.offset[2],
+        part.orient[0][0],
+        part.orient[0][1],
+        part.orient[0][2],
+        part.orient[1][0],
+        part.orient[1][1],
+        part.orient[1][2],
+        part.orient[2][0],
+        part.orient[2][1],
+        part.orient[2][2],
+        part.type);
+
+      vectorcp(f,s);
     }
-
-    mat_mult(rot,orient,part->orient);
-
-    // rotate the offset by
-
-    rotate_point3(roffset,f_constraint->offset,rot);
-
-    floc[0] = f[0] + f_constraint->part.loc.x - roffset[0];
-    floc[1] = f[1] + f_constraint->part.loc.y - roffset[1];
-    floc[2] = f[2] + f_constraint->part.loc.z - roffset[2];
-
-    rotate_point3(loc, floc,absolute->orient);
-
-    loc[0] += absolute->loc.x;
-    loc[1] += absolute->loc.y;
-    loc[2] += absolute->loc.z;
-
-    mat_mult(trot,absolute->orient,rot);
-
-    output_line(output,
-      ghost,
-      color,
-      loc[0],loc[1],loc[2],
-      trot[0][0],
-      trot[0][1],
-      trot[0][2],
-      trot[1][0],
-      trot[1][1],
-      trot[1][2],
-      trot[2][0],
-      trot[2][1],
-      trot[2][2],
-      part->part);
-
-    f[0] = s[0];
-    f[1] = s[1];
-    f[2] = s[2];
   }
   return 0;
 }
 
-static void
-rotate_point(
-  LSL_3D *loc,
-  PRECISION m[3][3])
+void
+showconstraints(
+  FILE                *output,
+  LSL_band_constraint *constraints,
+  int                  n_constraints,
+  int                  color)
 {
-  PRECISION t[3];
+#if 0
+  int i;
 
-  t[0] = loc->x*m[0][0] + loc->y*m[0][1] + loc->z*m[0][2];
-  t[1] = loc->x*m[1][0] + loc->y*m[1][1] + loc->z*m[1][2];
-  t[2] = loc->x*m[2][0] + loc->y*m[2][1] + loc->z*m[2][2];
-
-  loc->x = t[0];
-  loc->y = t[1];
-  loc->z = t[2];
+  for (i = 0; i < n_constraints; i++) {
+    output_line(
+      output,
+      0,
+      color,
+      constraints[i].part.offset[0],
+      constraints[i].part.offset[1],
+      constraints[i].part.offset[2],
+      constraints[i].part.orient[0][0],
+      constraints[i].part.orient[0][1],
+      constraints[i].part.orient[0][2],
+      constraints[i].part.orient[1][0],
+      constraints[i].part.orient[1][1],
+      constraints[i].part.orient[1][2],
+      constraints[i].part.orient[2][0],
+      constraints[i].part.orient[2][1],
+      constraints[i].part.orient[2][2],
+      constraints[i].part.type);
+  }
+#endif
 }
 
+static void
+rotate_constraints(
+  LSL_band_constraint *constraints,
+  int                  n_constraints,
+  PRECISION            m[3][3])
+{
+  int i;
+  PRECISION t[3][3];
+
+  for (i = 0; i < n_constraints; i++) {
+    vectorrot(constraints[i].part.offset,m);
+    matrixcp(t,constraints[i].part.orient);
+    matrixmult3(constraints[i].part.orient,m,t);
+  }
+}
+
+/*
+ * This subroutine synthesizes planar rubber bands, chain, and treads.
+ *
+ * We do all the arc and tangent analysis in the X/Y plane.
+ *
+ * The synthesis plane is defined by the first constraint.  First we move the
+ * first constaint to the origin. Then we calculate the inverse of the first
+ * constraints orientation, and multiply all the constraints' offsetations by
+ * the inverse of the first constraint's orientation.
+ *
+ * Some of the gears' are oriented in the X/Y plane, while other gears are
+ * oriented in the X/Z plane.  The constraint_type array above, describes each of the
+ * supported constraint types, and their orientation.  We multiply all the
+ * constraints by the first constraint's constraint_type orientation.
+ *
+ * Also, in some cases, some of the constraint types described in constraint_type
+ * need to be offset to get the place where the band should hit onto the
+ * X/Y plane.
+ */
 int
 synth_band(
   char *type,
@@ -811,14 +1074,14 @@ synth_band(
   int was_cross = 0;
   int inside = 1;
   int first,last;
-  LSL_part_usage absolute;
-  PRECISION xangle,yangle,zangle;
-  PRECISION xrot[3][3],yrot[3][3],zrot[3][3],trot[3][3];
+  part_t absolute;
+  PRECISION inv[3][3],trot[3][3];
   int layer = 0;
   band_attrib_t *band_type = NULL;
-  LSL_band_constraint save_constraint;
 
-  for (i = 0; i < sizeof(band_types)/sizeof(band_types[0]); i++) {
+  /* Search for band type */
+
+  for (i = 0; i < N_BAND_TYPES; i++) {
     if (strcmp(type,band_types[i].type) == 0) {
       band_type = &band_types[i];
       break;
@@ -831,10 +1094,10 @@ synth_band(
   first = -1;
 
   for (i = 0; i < n_constraints; i++) {
-    constraints[i].radius     = 0;
-    constraints[i].inside     = inside;
-    constraints[i].cross      = cross;
-    constraints[i].was_cross  = was_cross;
+    constraints[i].radius       = 0;
+    constraints[i].inside       = inside;
+    constraints[i].cross        = cross;
+    constraints[i].was_cross    = was_cross;
     constraints[i].n_crossings  = 0;
     constraints[i].layer        = -1;
     was_cross = 0;
@@ -846,30 +1109,15 @@ synth_band(
       inside ^= 1;
 
     } else {
-      int j;
+      int k;
 
       // search the constraints table
 
-      for (j = 0; j < sizeof(radiai)/sizeof(radiai[0]); j++) {
-        if (strcmp(constraints[i].part.type,radiai[j].type) == 0) {
-          PRECISION torient[3][3];
+      for (k = 0; k < sizeof(constraint_type)/sizeof(constraint_type[0]); k++) {
+        if (strcmp(constraints[i].part.type,constraint_type[k].type) == 0) {
+          constraints[i].constraint_type_n = k;
 
-          torient[0][0] = constraints[i].part.orient[0][0];
-          torient[0][1] = constraints[i].part.orient[0][1];
-          torient[0][2] = constraints[i].part.orient[0][2];
-          torient[1][0] = constraints[i].part.orient[1][0];
-          torient[1][1] = constraints[i].part.orient[1][1];
-          torient[1][2] = constraints[i].part.orient[1][2];
-          torient[2][0] = constraints[i].part.orient[2][0];
-          torient[2][1] = constraints[i].part.orient[2][1];
-          torient[2][2] = constraints[i].part.orient[2][2];
-
-          mat_mult(constraints[i].part.orient,radiai[j].orient,torient);
-
-          constraints[i].radius = radiai[j].radius;
-          constraints[i].offset[0] = radiai[j].offset[0];
-          constraints[i].offset[1] = radiai[j].offset[1];
-          constraints[i].offset[2] = radiai[j].offset[2];
+          constraints[i].radius = constraint_type[k].radius;
           break;
         }
       }
@@ -887,91 +1135,50 @@ synth_band(
   constraints[i].cross     = cross;
   constraints[i].was_cross = was_cross;
 
-  /*****************************************************
-   * adjust all the constraints so that the first
-   * pully is the origin.
-   *
-   * rotate from the plane indicated by first pulley
-   * into the x/y plane.
-   *
-   * hint: if rotated about the x and/or y plane, reverse the
-   * rotation.
-   *****************************************************/
+  /* record the first constraint in its original form */
 
-  memcpy(&absolute,&constraints[first].part,sizeof(absolute));
+  absolute = constraints[first].part;
+
+  /* 1. move the first constraint to the origin */
 
   for (i = 0; i <= n_constraints; i++) {
     if (constraints[i].radius) {
-      constraints[i].part.loc.x -= absolute.loc.x;
-      constraints[i].part.loc.y -= absolute.loc.y;
-      constraints[i].part.loc.z -= absolute.loc.z;
+      vectorsub(constraints[i].part.offset,absolute.offset);
     }
   }
 
-  xangle = asin(absolute.orient[1][2]);
-  yangle = asin(-absolute.orient[0][2]);
-  zangle = -asin(-absolute.orient[0][1]);
+  showconstraints(output,constraints,n_constraints,14);
 
-  xrot[0][0] = 1;
-  xrot[0][1] = 0;
-  xrot[0][2] = 0;
-  xrot[1][0] = 0;
-  xrot[1][1] = cos(xangle);
-  xrot[1][2] = -sin(xangle);
-  xrot[2][0] = 0;
-  xrot[2][1] = sin(xangle);
-  xrot[2][2] = cos(xangle);
+  /* 2. bring the entire assembly into the part's natural orientation */
+
+  matrixinv(inv,absolute.orient);
+
+  rotate_constraints(constraints,n_constraints+1,inv);
+
+  showconstraints(output,constraints,n_constraints,4);
+
+  /* 3. bring the assembly into the X/Y plane (necessary for first constraints
+   *    who's gear plane is different that the default gear plane used by
+   *    simple gears, like technic turntable).
+   */
+
+  rotate_constraints(constraints,n_constraints+1,
+    constraint_type[constraints[first].constraint_type_n].orient);
+
+  showconstraints(output,constraints,n_constraints,15);
+
+  /* 4. offset constraint's who's gear plane does not intersect with the
+   *    origin.
+   */
 
   for (i = 0; i <= n_constraints; i++) {
     if (constraints[i].radius) {
-      rotate_point(&constraints[i].part.loc,xrot);
+      vectorsub(constraints[i].part.offset,
+        constraint_type[constraints[i].constraint_type_n].offset);
     }
   }
 
-  yrot[0][0] = cos(yangle);
-  yrot[0][1] = 0;
-  yrot[0][2] = sin(yangle);
-  yrot[1][0] = 0;
-  yrot[1][1] = 1;
-  yrot[1][2] = 0;
-  yrot[2][0] = -sin(yangle);
-  yrot[2][1] = 0;
-  yrot[2][2] = cos(yangle);
-
-  for (i = 0; i <= n_constraints; i++) {
-    if (constraints[i].radius) {
-      rotate_point(&constraints[i].part.loc,yrot);
-    }
-  }
-
-  zrot[0][0] =  cos(zangle);
-  zrot[0][1] = -sin(zangle);
-  zrot[0][2] = 0;
-  zrot[1][0] =  sin(zangle);
-  zrot[1][1] =  cos(zangle);
-  zrot[1][2] = 0;
-  zrot[2][0] = 0;
-  zrot[2][1] = 0;
-  zrot[2][2] = 1;
-
-  for (i = 0; i <= n_constraints; i++) {
-    if (constraints[i].radius) {
-      rotate_point(&constraints[i].part.loc,zrot);
-    }
-  }
-
-
-  for (i = 0; i < sizeof(radiai)/sizeof(radiai[0]); i++) {
-    if (strcmp(constraints[0].part.type,radiai[i].type) == 0) {
-      int j,k;
-      for (j = 0; j < 3; j++) {
-        for (k = 0; k < 3; k++) {
-          save_constraint.part.orient[j][k] = constraints[0].part.orient[j][k];
-          constraints[0].part.orient[j][k] = radiai[i].orient[j][k];
-        }
-      }
-    }
-  }
+  showconstraints(output,constraints,n_constraints,3);
 
   /* figure out the tangents' intersections with circles */
 
@@ -999,7 +1206,7 @@ synth_band(
       i++;
     }
   }
-  constraints[first].end_angle = constraints[last].end_angle;
+  vectorcp(constraints[first].end_angle,constraints[last].end_angle);
 
   /* calculate intersections between band straight line segments, so
    * we can make the line segments go around each other.
@@ -1007,7 +1214,7 @@ synth_band(
 
   for (i = 0; i < n_constraints; i++) {
     if (constraints[i].radius) {
-      constraints[i].crossings[0] = constraints[i].start_line;
+      vectorcp(constraints[i].crossings[0],constraints[i].start_line);
       constraints[i].n_crossings = 1;
     }
   }
@@ -1035,7 +1242,7 @@ synth_band(
         if (constraints[i].radius) {
           int j;
           for (j = 1; j < constraints[i].n_crossings; j++) {
-            constraints[i].crossings[j].loc.z =
+            constraints[i].crossings[j][2] =
               (constraints[i].layer-layer/2)*BAND_DIAM + layer_offset;
           }
         }
@@ -1045,7 +1252,8 @@ synth_band(
 
   for (i = 0; i < n_constraints; i++) {
     if (constraints[i].radius) {
-      constraints[i].crossings[constraints[i].n_crossings++] = constraints[i].end_line;
+      vectorcp(constraints[i].crossings[constraints[i].n_crossings++],
+               constraints[i].end_line);
     }
   }
 
@@ -1061,13 +1269,6 @@ synth_band(
    * coordinates.
    *****************************************************/
 
-  for (i = 0; i < 3; i++) {
-    int j;
-    for (j = 0; j < 3; j++) {
-      constraints[0].part.orient[i][j] = save_constraint.part.orient[i][j];
-    }
-  }
-
   fprintf(output,"0 SYNTH SYNTHESIZED BEGIN\n");
 
   /* now draw out the rubber band in terms of lines and arcs */
@@ -1075,6 +1276,7 @@ synth_band(
     if (constraints[i].radius != 0) {
       int j;
       for (j = i+1; j <= n_constraints; j++) {
+
         if (constraints[j].radius) {
           draw_arc_line(
             band_type,
@@ -1083,7 +1285,8 @@ synth_band(
             n_constraints > 1,
             output,
             ghost,
-            &absolute);
+            &absolute,
+            &constraints[first]);
           i = j;
           break;
         }
@@ -1100,9 +1303,3 @@ synth_band(
   printf("Synthesized %s\n",type);
   return 0;
 }
-
-
-
-
-
-

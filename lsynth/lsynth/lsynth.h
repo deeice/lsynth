@@ -9,67 +9,39 @@
 #include "stdio.h"
 #include "math.h"
 #include <string.h>
-
-#ifndef PRECISION
-#define PRECISION double
-#endif
-
-#define RIBBED_HOSE       "RIBBED_HOSE "
-#define RUBBER_HOSE       "RUBBER_HOSE "
-#define STRING            "STRING "
-#define MINIFIG_CHAIN     "MINIFIG_CHAIN "
-#define FLEXIBLE_HOSE     "FLEX_SYSTEM_HOSE_LD "
-#define FLEX_CABLE        "FLEX_SYSTEM_CABLE "
-#define RIGID_HOSE        "FLEX_SYSTEM_HOSE "
-#define ELECTRIC_CABLE    "ELECTRIC_CABLE "
-#define PNEUMATIC_HOSE    "PNEUMATIC_HOSE "
-#define FLEXIBLE_AXLE     "FLEXIBLE_AXLE "
-#define FIBER_OPTIC_CABLE "FIBER_OPTIC_CABLE "
-
-#define ALL_HOSES RIBBED_HOSE,FLEX_CABLE,FLEXIBLE_HOSE,RIGID_HOSE,ELECTRIC_CABLE,PNEUMATIC_HOSE,FLEXIBLE_AXLE,FIBER_OPTIC_CABLE,RUBBER_HOSE,STRING,MINIFIG_CHAIN
-
-#define RUBBER_BAND       "RUBBER_BAND "
-#define RUBBER_BELT       "RUBBER_BELT "
-#define CHAIN             "CHAIN "
-#define PLASTIC_TREAD     "PLASTIC_TREAD "
-#define RUBBER_TREAD      "RUBBER_TREAD "
-
-#define ALL_BANDS RUBBER_BAND,RUBBER_BELT,CHAIN,PLASTIC_TREAD,RUBBER_TREAD
+#include "mathlib.h"
 
 #define ACCY (1e-6)
 
 typedef struct {
-  PRECISION x,y,z;
-} LSL_3D;
-
-typedef struct {
-  int color;
-  char type[128];
-  LSL_3D loc;
+  char      type[128];
   PRECISION orient[3][3];
-} LSL_part_usage;
+  PRECISION offset[3];
+  int       attrib;
+} part_t;
 
 typedef struct {
-  LSL_part_usage part;
-  PRECISION      radius;
-  PRECISION      offset[3];
-  int            inside;
-  int            was_cross;
-  int            cross;
+  part_t    part;
+  PRECISION radius;
+  int       inside;
+  int       was_cross;
+  int       cross;
+  PRECISION start_line[3];
+  PRECISION end_line[3];
+  PRECISION crossings[8][3];
+  int       n_crossings;
+  int       layer;
 
-  LSL_part_usage start_line;  /* from next to previous */
-  LSL_part_usage end_line;
-  LSL_part_usage crossings[8];
-  int            n_crossings;
-  int            layer;
+  PRECISION start_angle[3];
+  PRECISION end_angle[3];
+  int       n_steps;
+  PRECISION s_angle;
 
-  LSL_part_usage start_angle;
-  LSL_part_usage end_angle;
-  int            n_steps;
-  PRECISION      s_angle;
+  int       constraint_type_n;
 } LSL_band_constraint;
 
 extern PRECISION hose_res_angle;
+extern PRECISION band_res;
 
 void
 output_line(

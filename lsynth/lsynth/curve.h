@@ -11,12 +11,12 @@ extern "C" {
 
 int
 synth_curve(
-  LSL_part_usage       *start,
-  LSL_part_usage       *end,
-  LSL_part_usage       *segments,
-  int                   n_segments,
-  PRECISION             attrib,
-  FILE                 *output);
+  part_t   *start,
+  part_t   *end,
+  part_t   *segments,
+  int       n_segments,
+  PRECISION attrib,
+  FILE     *output);
 
 #ifdef _cplusplus
 };

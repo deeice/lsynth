@@ -3,9 +3,10 @@
  * By Kevin Clague
  */
 
-#include "lsynth.h"
-#include "tube.h"
+#include "lsynthcp.h"
+#include "hose.h"
 #include "curve.h"
+#include "mathlib.h"
 
 /*
  * a 1x1 brick is 20 LDU wide and 24 LDU high
@@ -16,104 +17,59 @@
  *
  */
 
-static void
-mult_point(PRECISION r[3], PRECISION lhs[3], PRECISION rhs[3])
-{
-  PRECISION tt;
-
-  r[0] = lhs[1]*rhs[2] - lhs[2]*rhs[1];
-  r[1] = lhs[2]*rhs[0] - lhs[0]*rhs[2];
-  r[2] = lhs[0]*rhs[1] - lhs[1]*rhs[0];
-
-  tt = sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]);
-
-  r[0] /= tt;
-  r[1] /= tt;
-  r[2] /= tt;
-}
-
-static void
-make_rotation_pp(
-  PRECISION r[3][3],
-  PRECISION up[3],
-  PRECISION front[3])
-{
-  PRECISION side[3];
-
-  mult_point(side,front,up);
-
-  r[0][0] = up[0];
-  r[1][0] = up[1];
-  r[2][0] = up[2];
-  r[0][1] = front[0];
-  r[1][1] = front[1];
-  r[2][1] = front[2];
-  r[0][2] = side[0];
-  r[1][2] = side[1];
-  r[2][2] = side[2];
-}
-
-static void
-rotate_point(
-  PRECISION r[3],
-  PRECISION m[3][3])
-{
-  PRECISION t[3];
-
-  t[0] = r[0]*m[0][0] + r[1]*m[0][1] + r[2]*m[0][2];
-  t[1] = r[0]*m[1][0] + r[1]*m[1][1] + r[2]*m[1][2];
-  t[2] = r[0]*m[2][0] + r[1]*m[2][1] + r[2]*m[2][2];
-
-  r[0] = t[0];
-  r[1] = t[1];
-  r[2] = t[2];
-}
-
 void orient(
-  int n_segments,
-  LSL_part_usage *segments)
+  int     n_segments,
+  part_t *segments)
 {
-  PRECISION r;
-  PRECISION up[3];
-  PRECISION front[3];
-  PRECISION t[3];
   int i;
-
-  up[0] = 1;
-  up[1] = 0;
-  up[2] = 0;
 
   for (i = 0; i < n_segments-1; i++) {
 
-    front[0] = segments[i+1].loc.x - segments[i].loc.x;
-    front[1] = segments[i+1].loc.y - segments[i].loc.y;
-    front[2] = segments[i+1].loc.z - segments[i].loc.z;
+      PRECISION dx, dy, dz;
+      PRECISION orient[3][3];
+      PRECISION L1,L2;
 
-    r = sqrt(front[0]*front[0] + front[1]*front[1] + front[2]*front[2]);
+      // determine the orientation of the part in the XY plane
 
-    if (r > 0) {
-      front[0] /= r;
-      front[1] /= r;
-      front[2] /= r;
+      dx = segments[i+1].offset[0] - segments[i].offset[0];
+      dy = segments[i+1].offset[1] - segments[i].offset[1];
+      dz = segments[i+1].offset[2] - segments[i].offset[2];
 
-      mult_point(t,front,up);
-      mult_point(up,t,front);
+      L1 = sqrt(dx*dx + dy*dy);
+      L2 = sqrt(dx*dx + dy*dy + dz*dz);
+      if (L1 == 0) {
 
-      make_rotation_pp(segments[i].orient,up,front);
-    } else {
-      printf("Radius == 0\n");
-    }
+        segments[i].orient[0][0] = 1;
+        segments[i].orient[1][0] = 0;
+        segments[i].orient[2][0] = 0;
+        segments[i].orient[0][1] = 0;
+        segments[i].orient[1][1] = 1;
+        segments[i].orient[2][1] = 0;
+        segments[i].orient[0][2] = 0;
+        segments[i].orient[1][2] = 0;
+        segments[i].orient[2][2] = 1;
+      } else {
+        segments[i].orient[0][0] =  dy/L1;  //  cos
+        segments[i].orient[1][0] = -dx/L1;  //  sin
+        segments[i].orient[2][0] =  0;
+        segments[i].orient[0][1] =  dx/L2;  // -sin
+        segments[i].orient[1][1] =  dy/L2;  //  cos
+        segments[i].orient[2][1] =  dz/L2;
+        segments[i].orient[0][2] = -dx*dz/(L1*L2);
+        segments[i].orient[1][2] = -dy*dz/(L1*L2);
+        segments[i].orient[2][2] =  L1/L2;
+      }
   }
 }
 
 int
 synth_curve(
-  LSL_part_usage       *start,
-  LSL_part_usage       *end,
-  LSL_part_usage       *segments,
-  int                   n_segments,
-  PRECISION             attrib,
-  FILE                 *output)
+  part_t       *start,
+  part_t       *end,
+  part_t       *segments,
+  int           n_segments,
+  PRECISION     attrib,
+  FILE         *output)
 {
   PRECISION vector[3];
   PRECISION start_speed_v[3];
@@ -156,33 +112,33 @@ synth_curve(
   for (i = 0; i < n_segments; i++) {
     time  = (PRECISION) i/ (PRECISION) n_segments;
 
-    segments[i].loc.x =
-      (1 - time) * (1 - time) * (1 - time) * start->loc.x +
-      (1 - time) * (1 - time) * 3 * time * (start->loc.x - start_speed_v[0]) +
-      (1 - time) * 3 * time * time * (end->loc.x - stop_speed_v[0]) +
-            time * time * time * end->loc.x;
+    segments[i].offset[0] =
+      (1 - time) * (1 - time) * (1 - time) * start->offset[0] +
+      (1 - time) * (1 - time) * 3 * time * (start->offset[0] - start_speed_v[0]) +
+      (1 - time) * 3 * time * time * (end->offset[0] - stop_speed_v[0]) +
+            time * time * time * end->offset[0];
 
-    segments[i].loc.y =
-      (1 - time) * (1 - time) * (1 - time) * start->loc.y +
-      (1 - time) * (1 - time) * 3 * time * (start->loc.y - start_speed_v[1]) +
-      (1 - time) * 3 * time * time * (end->loc.y - stop_speed_v[1]) +
-            time * time * time * end->loc.y;
+    segments[i].offset[1] =
+      (1 - time) * (1 - time) * (1 - time) * start->offset[1] +
+      (1 - time) * (1 - time) * 3 * time * (start->offset[1] - start_speed_v[1]) +
+      (1 - time) * 3 * time * time * (end->offset[1] - stop_speed_v[1]) +
+            time * time * time * end->offset[1];
 /*
 =(1-$A8)^3*D$4 + (1-$A8)^2*3*$A8*(D$4-D$3) +  (1-$A8)*3*$A8^2*(D$5-D$6) + $A8^3*D$5
  */
-    segments[i].loc.z =
-      (1 - time) * (1 - time) * (1 - time) * start->loc.z +
-      (1 - time) * (1 - time) * 3 * time * (start->loc.z - start_speed_v[2]) +
-      (1 - time) * 3 * time * time * (end->loc.z - stop_speed_v[2]) +
-            time * time * time * end->loc.z;
+    segments[i].offset[2] =
+      (1 - time) * (1 - time) * (1 - time) * start->offset[2] +
+      (1 - time) * (1 - time) * 3 * time * (start->offset[2] - start_speed_v[2]) +
+      (1 - time) * 3 * time * time * (end->offset[2] - stop_speed_v[2]) +
+            time * time * time * end->offset[2];
 
 #ifdef DEBUG
     if (output) {
       fprintf(output,"0 XYZ (%f %f %f %f)\n",
-        (1 - time) * (1 - time) * (1 - time) * start->loc.z,
-        (1 - time) * (1 - time) * 3 * time * (start->loc.z - start_speed_v[2]),
-        (1 - time) * 3 * time * time * (end->loc.z - stop_speed_v[2]),
-        time * time * time * end->loc.z);
+        (1 - time) * (1 - time) * (1 - time) * start->offset[2],
+        (1 - time) * (1 - time) * 3 * time * (start->offset[2] - start_speed_v[2]),
+        (1 - time) * 3 * time * time * (end->offset[2] - stop_speed_v[2]),
+        time * time * time * end->offset[2]);
     }
 #endif
   }
@@ -190,9 +146,9 @@ synth_curve(
   ptp_sum = 0;
 
   for (i = 0; i < n_segments - 1; i++) {
-    x = segments[i + 1].loc.x - segments[i].loc.x;
-    y = segments[i + 1].loc.y - segments[i].loc.y;
-    z = segments[i + 1].loc.z - segments[i].loc.z;
+    x = segments[i + 1].offset[0] - segments[i].offset[0];
+    y = segments[i + 1].offset[1] - segments[i].offset[1];
+    z = segments[i + 1].offset[2] - segments[i].offset[2];
 
     ptp = sqrt(x*x + y*y + z*z);
     ptp_sum += ptp;
@@ -204,9 +160,9 @@ synth_curve(
   for (i = 0; i < n_segments - 1; i++) {
     time  = (PRECISION) (i+1)/ (PRECISION) n_segments;
 
-    x = segments[i + 1].loc.x - segments[i].loc.x;
-    y = segments[i + 1].loc.y - segments[i].loc.y;
-    z = segments[i + 1].loc.z - segments[i].loc.z;
+    x = segments[i + 1].offset[0] - segments[i].offset[0];
+    y = segments[i + 1].offset[1] - segments[i].offset[1];
+    z = segments[i + 1].offset[2] - segments[i].offset[2];
 
     ptp = sqrt(x*x + y*y + z*z);
 
@@ -221,9 +177,9 @@ synth_curve(
   for (i = 0; i < n_segments - 1; i++) {
     PRECISION foo;
 
-    x = segments[i + 1].loc.x - segments[i].loc.x;
-    y = segments[i + 1].loc.y - segments[i].loc.y;
-    z = segments[i + 1].loc.z - segments[i].loc.z;
+    x = segments[i + 1].offset[0] - segments[i].offset[0];
+    y = segments[i + 1].offset[1] - segments[i].offset[1];
+    z = segments[i + 1].offset[2] - segments[i].offset[2];
 
     ptp = sqrt(x * x + y * y + z * z);  /* E */
     ratio = ptp*n_segments/ptp_sum;     /* F */
@@ -235,55 +191,55 @@ synth_curve(
 
 #ifdef DEBUG
     if (output) {
-      fprintf(output,"0 XYZ %f %f %f PTP %f ITIME %f ",segments[i].loc.x,segments[i].loc.y,segments[i].loc.z,ptp,i_time_sum2);
+      fprintf(output,"0 XYZ %f %f %f PTP %f ITIME %f ",segments[i].offset[0],segments[i].offset[1],segments[i].offset[2],ptp,i_time_sum2);
     }
 #endif
     i_time_sum2 += i_time;
 
-    segments[i].loc.x =
-      (1 - n_time) * (1 - n_time) * (1 - n_time) * start->loc.x +
-      (1 - n_time) * (1 - n_time) * 3 * n_time * (start->loc.x - start_speed_v[0]) +
-      (1 - n_time) * 3 * n_time * n_time * (end->loc.x - stop_speed_v[0]) +
-       n_time * n_time * n_time * end->loc.x;
+    segments[i].offset[0] =
+      (1 - n_time) * (1 - n_time) * (1 - n_time) * start->offset[0] +
+      (1 - n_time) * (1 - n_time) * 3 * n_time * (start->offset[0] - start_speed_v[0]) +
+      (1 - n_time) * 3 * n_time * n_time * (end->offset[0] - stop_speed_v[0]) +
+       n_time * n_time * n_time * end->offset[0];
 
-    segments[i].loc.y =
-      (1 - n_time) * (1 - n_time) * (1 - n_time) * start->loc.y +
-      (1 - n_time) * (1 - n_time) * 3 * n_time * (start->loc.y - start_speed_v[1]) +
-      (1 - n_time) * 3 * n_time * n_time * (end->loc.y - stop_speed_v[1]) +
-       n_time * n_time * n_time * end->loc.y;
+    segments[i].offset[1] =
+      (1 - n_time) * (1 - n_time) * (1 - n_time) * start->offset[1] +
+      (1 - n_time) * (1 - n_time) * 3 * n_time * (start->offset[1] - start_speed_v[1]) +
+      (1 - n_time) * 3 * n_time * n_time * (end->offset[1] - stop_speed_v[1]) +
+       n_time * n_time * n_time * end->offset[1];
 
-    segments[i].loc.z =
-      (1 - n_time) * (1 - n_time) * (1 - n_time) * start->loc.z +
-      (1 - n_time) * (1 - n_time) * 3 * n_time * (start->loc.z - start_speed_v[2]) +
-      (1 - n_time) * 3 * n_time * n_time * (end->loc.z - stop_speed_v[2]) +
-       n_time * n_time * n_time * end->loc.z;
+    segments[i].offset[2] =
+      (1 - n_time) * (1 - n_time) * (1 - n_time) * start->offset[2] +
+      (1 - n_time) * (1 - n_time) * 3 * n_time * (start->offset[2] - start_speed_v[2]) +
+      (1 - n_time) * 3 * n_time * n_time * (end->offset[2] - stop_speed_v[2]) +
+       n_time * n_time * n_time * end->offset[2];
 
     n_time += foo;  /* H */
 
 #ifdef DEBUG
     if (output) {
-      fprintf(output," XYZ %f %f %f \n",segments[i].loc.x,segments[i].loc.y,segments[i].loc.z);
+      fprintf(output," XYZ %f %f %f \n",segments[i].offset[0],segments[i].offset[1],segments[i].offset[2]);
     }
 #endif
   }
 
-  segments[i].loc.x =
-    (1 - n_time) * (1 - n_time) * (1 - n_time) * start->loc.x +
-    (1 - n_time) * (1 - n_time) * 3 * n_time * (start->loc.x - start_speed_v[0]) +
-    (1 - n_time) * 3 * n_time * n_time * (end->loc.x - stop_speed_v[0]) +
-     n_time * n_time * n_time * end->loc.x;
+  segments[i].offset[0] =
+    (1 - n_time) * (1 - n_time) * (1 - n_time) * start->offset[0] +
+    (1 - n_time) * (1 - n_time) * 3 * n_time * (start->offset[0] - start_speed_v[0]) +
+    (1 - n_time) * 3 * n_time * n_time * (end->offset[0] - stop_speed_v[0]) +
+     n_time * n_time * n_time * end->offset[0];
 
-  segments[i].loc.y =
-    (1 - n_time) * (1 - n_time) * (1 - n_time) * start->loc.y +
-    (1 - n_time) * (1 - n_time) * 3 * n_time * (start->loc.y - start_speed_v[1]) +
-    (1 - n_time) * 3 * n_time * n_time * (end->loc.y - stop_speed_v[1]) +
-     n_time * n_time * n_time * end->loc.y;
+  segments[i].offset[1] =
+    (1 - n_time) * (1 - n_time) * (1 - n_time) * start->offset[1] +
+    (1 - n_time) * (1 - n_time) * 3 * n_time * (start->offset[1] - start_speed_v[1]) +
+    (1 - n_time) * 3 * n_time * n_time * (end->offset[1] - stop_speed_v[1]) +
+     n_time * n_time * n_time * end->offset[1];
 
-  segments[i].loc.z =
-    (1 - n_time) * (1 - n_time) * (1 - n_time) * start->loc.z +
-    (1 - n_time) * (1 - n_time) * 3 * n_time * (start->loc.z - start_speed_v[2]) +
-    (1 - n_time) * 3 * n_time * n_time * (end->loc.z - stop_speed_v[2]) +
-     n_time * n_time * n_time * end->loc.z;
+  segments[i].offset[2] =
+    (1 - n_time) * (1 - n_time) * (1 - n_time) * start->offset[2] +
+    (1 - n_time) * (1 - n_time) * 3 * n_time * (start->offset[2] - start_speed_v[2]) +
+    (1 - n_time) * 3 * n_time * n_time * (end->offset[2] - stop_speed_v[2]) +
+     n_time * n_time * n_time * end->offset[2];
 
   orient(n_segments, segments);
 

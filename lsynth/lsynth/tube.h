@@ -9,17 +9,20 @@
 extern "C" {
 #endif
 
-int
-synth_tube(
-  char                 *type,
-  int                   n_constraints,
-  LSL_part_usage       *constraints,
-  int                   ghost,
-  int                   color,
-  FILE *output);
+void list_hose_types(      void);
+void list_hose_constraints(void);
+void hose_ini(             void);
+int ishosetype(      char *type);
+int ishoseconstraint(char *type);
 
-void mat_mult( PRECISION res[3][3], PRECISION lft[3][3], PRECISION rht[3][3]);
-void rotate( PRECISION res[3], PRECISION loc[3], PRECISION rot[3][3]);
+int
+synth_hose(
+  char   *type,
+  int     n_constraints,
+  part_t *constraints,
+  int     ghost,
+  int     color,
+  FILE   *output);
 #ifdef _cplusplus
 };
 #endif
