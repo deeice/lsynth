@@ -69,13 +69,50 @@ rotate_point(
   r[2] = t[2];
 }
 
+void orient(
+  int n_segments,
+  LSL_part_usage *segments)
+{
+  PRECISION r;
+  PRECISION up[3];
+  PRECISION front[3];
+  PRECISION t[3];
+  int i;
+
+  up[0] = 1;
+  up[1] = 0;
+  up[2] = 0;
+
+  for (i = 0; i < n_segments-1; i++) {
+
+    front[0] = segments[i+1].loc.x - segments[i].loc.x;
+    front[1] = segments[i+1].loc.y - segments[i].loc.y;
+    front[2] = segments[i+1].loc.z - segments[i].loc.z;
+
+    r = sqrt(front[0]*front[0] + front[1]*front[1] + front[2]*front[2]);
+
+    if (r > 0) {
+      front[0] /= r;
+      front[1] /= r;
+      front[2] /= r;
+
+      mult_point(t,front,up);
+      mult_point(up,t,front);
+
+      make_rotation_pp(segments[i].orient,up,front);
+    } else {
+      printf("Radius == 0\n");
+    }
+  }
+}
+
 int
 synth_curve(
   LSL_part_usage       *start,
   LSL_part_usage       *end,
   LSL_part_usage       *segments,
   int                   n_segments,
-  LSL_tube_attributes  *attrib,
+  PRECISION             attrib,
   FILE                 *output)
 {
   PRECISION vector[3];
@@ -89,7 +126,7 @@ synth_curve(
   PRECISION up[3];
 
   vector[0] = 0;
-  vector[1] = attrib->exit_start;
+  vector[1] = attrib;
   vector[2] = 0;
 
   for (j = 0; j < 3; j++)
@@ -102,7 +139,7 @@ synth_curve(
   }
 
   vector[0] = 0;
-  vector[1] = attrib->exit_stop;
+  vector[1] = attrib;
   vector[2] = 0;
 
   for (j = 0; j < 3; j++)
@@ -248,37 +285,8 @@ synth_curve(
     (1 - n_time) * 3 * n_time * n_time * (end->loc.z - stop_speed_v[2]) +
      n_time * n_time * n_time * end->loc.z;
 
-  up[0] = 1;
-  up[1] = 0;
-  up[2] = 0;
+  orient(n_segments, segments);
 
-  rotate_point(up,start->orient);
-
-  for (i = 0; i < n_segments-1; i++) {
-    PRECISION r;
-    PRECISION front[3];
-    PRECISION t[3];
-
-    front[0] = segments[i+1].loc.x - segments[i].loc.x;
-    front[1] = segments[i+1].loc.y - segments[i].loc.y;
-    front[2] = segments[i+1].loc.z - segments[i].loc.z;
-
-    r = sqrt(front[0]*front[0] + front[1]*front[1] + front[2]*front[2]);
-
-    front[0] /= r;
-    front[1] /= r;
-    front[2] /= r;
-
-    mult_point(t,front,up);
-    mult_point(up,t,front);
-
-    make_rotation_pp(segments[i].orient,up,front);
-  }
   return 0; /* it all worked */
 }
-
-
-
-
-
 

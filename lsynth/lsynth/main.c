@@ -18,14 +18,27 @@ void strupper(char *s) {
 static int skip_rot(char *line, int n_line, FILE *dat, FILE *temp)
 {
   char *nonwhite;
+  char  caps[512];
 
-  nonwhite = line + strspn(line, " \t");
+  strcpy(caps,line);
 
-  while (strncmp(nonwhite,"0 ROTATION C",strlen("0 ROTATION C")) == 0) {
+  for (nonwhite = caps; *nonwhite != '\0'; nonwhite++) {
+    if (*nonwhite != ' ') {
+      break;
+    }
+  }
+
+  while (strncmp(nonwhite,"0 ROTATION",strlen("0 ROTATION")) == 0 ||
+         strncmp(nonwhite,"0 COLOR",strlen("0 COLOR")) == 0) {
     fputs(line,temp);
     fgets(line,n_line,dat);  /* FIXME: check fgets rc */
-    strupper(line);
-    nonwhite = line + strspn(line, " \t");
+    strcpy(caps,line);
+    strupper(caps);
+    for (nonwhite = caps; *nonwhite != '\0'; nonwhite++) {
+      if (*nonwhite != ' ') {
+        break;
+      }
+    }
   }
 
   return 0;
@@ -36,14 +49,16 @@ int skip_synthesized(FILE *dat, char *line, int sizeof_line)
   int rc;
   char *nonwhite;
 
-  nonwhite = line + strspn(line, " \t");
-
-  if (strcmp(nonwhite,"0 SYNTHESIZED BEGIN\n") == 0) {
+  if (strcmp(line,"0 SYNTHESIZED BEGIN\n") == 0) {
     int rc;
 
     while (fgets(line,sizeof(line),dat)) {
       strupper(line);
-      nonwhite = line + strspn(line, " \t");
+      for (nonwhite = line; *nonwhite != '\0'; nonwhite++) {
+        if (*nonwhite != ' ') {
+          break;
+        }
+      }
       if (strcmp(nonwhite,"0 SYNTHESIZED END\n") == 0) {
         return 0;
       }
@@ -54,57 +69,72 @@ int skip_synthesized(FILE *dat, char *line, int sizeof_line)
   }
 }
 
-static char *tube_types[] = {
-  ALL_HOSES,
-  "",
-};
-
 static
 int synth_tube_like(
-  char *type,
-  char *resid,
+  char *nonwhite,
   FILE *dat,
   FILE *temp)
 {
+  char type[256];
+  char *s;
   char line[512];
-  char *nonwhite;
+  char caps[512];
   LSL_part_usage constraints[128];
   int constraint_n = 0;
   int color;
   char start_type[64];
   float a,b,c, d,e,f, g,h,i, j,k,l;
   int rc = 0;
-  float length;
-  char units[64];
   int  hide = 1;
   int hose_color;
   int ghost = 0;
 
+  memset(constraints, 128, sizeof(LSL_part_usage));
+
   /* parse up remainder of line and convert units to LDU */
 
-  if (sscanf(resid,"%d\n",&hose_color) != 1) {
+  for (s = type; *nonwhite && *nonwhite != ' '; ) {
+    *s++ = *nonwhite++;
+  }
+  *s = 0;
+
+  while (*nonwhite == ' ') {
+    nonwhite++;
+  }
+
+  if (sscanf(nonwhite,"%d\n",&hose_color) != 1) {
     return -1;
   }
 
-  length = 0;
-  units[0] = '\0';
-  *resid = '\0';
   /* gather up the constraints */
 
   while (fgets(line,sizeof(line), dat)) {
-    strupper(line);
+    strcpy(caps,line);
+    strupper(caps);
 
-    nonwhite = line + strspn(line, " \t");
+    for (nonwhite = caps; *nonwhite != '\0'; nonwhite++) {
+      if (*nonwhite != ' ') {
+        break;
+      }
+    }
 
     skip_rot(line,sizeof(line),dat,temp);
 
-    nonwhite = line + strspn(line, " \t");
+    for (nonwhite = line; *nonwhite != '\0'; nonwhite++) {
+      if (*nonwhite != ' ') {
+        break;
+      }
+    }
 
     if (strncmp(nonwhite,"0 GHOST ",strlen("0 GHOST ")) == 0) {
       ghost = 1;
       nonwhite += strlen("0 GHOST ");
 
-      nonwhite += strspn(nonwhite, " \t");
+      for ( ; *nonwhite != '\0'; nonwhite++) {
+        if (*nonwhite != ' ') {
+          break;
+        }
+      }
     }
 
     if (sscanf(nonwhite,"1 %d %f %f %f %f %f %f %f %f %f %f %f %f %s",
@@ -151,19 +181,31 @@ int synth_tube_like(
 
   rc = skip_synthesized(dat, line, sizeof(line));
 
+  strcpy(caps,line);
+  strupper(caps);
+
   if (rc == 0) {
 
-    nonwhite = line + strspn(line, " \t");
+    for (nonwhite = caps; *nonwhite != '\0'; nonwhite++) {
+      if (*nonwhite != ' ') {
+        break;
+      }
+    }
 
     if (strcmp(nonwhite,"0 SYNTH END\n") == 0 ||
         strcmp(nonwhite,"0 WRITE SYNTH END\n") == 0) {
 
-      rc = synth_tube(type,constraint_n,constraints,length,units,hose_color,temp,ghost);
+      rc = synth_tube(type,constraint_n,constraints,ghost,hose_color,temp);
       fputs(line,temp);
     }
   }
   return rc;
 }
+
+static char *tube_types[] = {
+  ALL_HOSES,
+  ""
+};
 
 static char *band_types[] = {
   ALL_BANDS,
@@ -178,6 +220,7 @@ int synth_band_like(
   FILE *temp)
 {
   char line[512];
+  char caps[512];
   char *nonwhite;
   LSL_band_constraint constraints[128];
   int constraint_n = 0;
@@ -192,6 +235,8 @@ int synth_band_like(
   int  ghost = 0;
   /* parse up remainder of line and convert units to LDU */
 
+  memset(constraints, 128, sizeof(LSL_part_usage));
+
   if (sscanf(resid,"%d\n",&color) != 1) {
     return -1;
   }
@@ -200,19 +245,34 @@ int synth_band_like(
   /* gather up the constraints */
 
   while (fgets(line,sizeof(line), dat)) {
-    strupper(line);
+    strcpy(caps,line);
+    strupper(caps);
 
-    nonwhite = line + strspn(line, " \t");
+    for (nonwhite = caps; *nonwhite != '\0'; nonwhite++) {
+      if (*nonwhite != ' ') {
+        break;
+      }
+    }
 
     skip_rot(line,sizeof(line),dat,temp);
+    strcpy(caps,line);
+    strupper(caps);
 
-    nonwhite = line + strspn(line, " \t");
+    for (nonwhite = caps; *nonwhite != '\0'; nonwhite++) {
+      if (*nonwhite != ' ') {
+        break;
+      }
+    }
 
     if (strncmp(nonwhite,"0 GHOST ",strlen("0 GHOST ")) == 0) {
       ghost = 1;
       nonwhite += strlen("0 GHOST ");
 
-      nonwhite += strspn(nonwhite, " \t");
+      for ( ; *nonwhite != '\0'; nonwhite++) {
+        if (*nonwhite != ' ') {
+          break;
+        }
+      }
     }
 
     if (sscanf(nonwhite,"1 %d %f %f %f %f %f %f %f %f %f %f %f %f %s",
@@ -271,10 +331,16 @@ int synth_band_like(
   }
 
   rc = skip_synthesized(dat, line, sizeof(line));
+  strcpy(caps,line);
+  strupper(caps);
 
   if (rc == 0) {
 
-    nonwhite = line + strspn(line, " \t");
+    for (nonwhite = caps; *nonwhite != '\0'; nonwhite++) {
+      if (*nonwhite != ' ') {
+        break;
+      }
+    }
 
     if (strcmp(nonwhite,"0 SYNTH END\n") == 0 ||
         strcmp(nonwhite,"0 WRITE SYNTH END\n") == 0) {
@@ -286,62 +352,18 @@ int synth_band_like(
   return 0;
 }
 
+PRECISION hose_res_angle = 0.01;
 
-//---------------------------------------------------------------------------
-char * stripquotes(char *s)
-{
-  char *p;
-  int i;
-  
-  // Strip away leading whitespace (spaces and tabs).
-  s += strspn(s, " \t");
-
-  // Remove leading quotes
-  if (*s == '\"')
-    s++;
-
-  // Allocate memory so we can modify the end of the string.
-  s = strdup(s);
-  
-  // Eliminate trailing whitespace
-#if 0
-#include <libgen.h>
-  if (i = strrspn(s, " \t"))
-    s[i] = '\0';
-#else
-  for (p = s + (strlen(s)-1); p >= s; p--)
-  {
-    if ((*p == ' ') || (*p == '\t'))
-      *p = 0;
-    else
-      break;
-  }
-#endif
-  
-  // Remove trailing quotes.
-  if ((p = strrchr(s, '\"')) != NULL)
-    *p = 0;
-
-  return(s);
-}
-
-//---------------------------------------------------------------------------
 #pragma argsused
 int main(int argc, char* argv[])
 {
   char *dat_name = argv[1];
   char *dst_name = argv[2];
-  char *synth_name = NULL;
-  char filename[512];
-  FILE *outfile;
-  FILE *synthfile;
+  FILE *temp;
   FILE *dat;
   char line[512];
+  char caps[512];
   char *nonwhite;
-  int   rc = 0;
-  int  synthcount = 0;
-  int  synthonly = 0;
-  int  subfiles = 0;
 
   printf("LSynth version 2.1 by Kevin Clague, kevin_clague@yahoo.com\n");
 
@@ -361,25 +383,27 @@ int main(int argc, char* argv[])
     return -1;
   }
 
-  outfile = fopen(dst_name,"w");
+  temp = fopen(dst_name,"w");
 
-  if (outfile == NULL) {
+  if (temp == NULL) {
     printf("%s: Failed to open file %s for writing\n",argv[0],dst_name);
     return -1;
   }
 
-  // Consider using L3fgets() to avoid OS dependent line termination issues.
   while (fgets(line,sizeof(line), dat)) {
 
     int format;
 
-    if (!synthonly)
-      fputs(line,outfile); // Copy line to output file before uppercasing it.
+    strcpy(caps,line);
+    strupper(caps);
 
-    strupper(line);
+    for (nonwhite = caps; *nonwhite != '\0'; nonwhite++) {
+      if (*nonwhite != ' ') {
+        break;
+      }
+    }
 
-    // Strip away leading whitespace (spaces and tabs).
-    nonwhite = line + strspn(line, " \t");
+    fputs(line,temp);
 
     format = (strncmp(nonwhite,
                      "0 SYNTH BEGIN ",
@@ -392,7 +416,6 @@ int main(int argc, char* argv[])
     if (format) {
 
       int type_index;
-      char *option;
 
       if (format == 1) {
         nonwhite += strlen("0 WRITE SYNTH BEGIN ");
@@ -400,90 +423,46 @@ int main(int argc, char* argv[])
         nonwhite += strlen("0 SYNTH BEGIN ");
       }
 
-      synthfile = outfile; // By default synth data goes to main outfile.
-      synthcount++; // Count the synth parts.
-
-      // We may be writing synth data to separate subfiles.
-      if (subfiles)
-      {
-	// Check if the subfile is named in the SYNTH BEGIN line.
-	if (option = strstr(nonwhite, "NAME="))
-	{
-	  option += strlen("NAME=");
-	  // Allocate memory for name, strip quotes and trailing spaces.
-	  synth_name = stripquotes(option); 
-	}
-	// Otherwise just number the subfile.  Use lsynthN.ldr for stdout?
-	else
-	{
-	  char *p;
-
-	  // Remove the extension from dat_name if not already gone.
-	  if ((p = strrchr(dst_name, '.')) != NULL)
-	    *p = 0;
-	  // Build the new subfilename.
-	  sprintf(filename, "%s%d.ldr", dst_name, synthcount);
-	  synth_name = strdup(filename);
-	}
-
-	synthfile = fopen(synth_name,"w");
-	if (synthfile == NULL) {
-	  printf("%s: Failed to open file %s for writing\n",argv[0],synth_name);
-	  return -1;
-	}
-
-	fputs(line, synthfile); // Warning, this line has been uppercased
-      }
-      if (option = strstr(nonwhite, "LENGTH="))
-      {
-	option += strlen("LENGTH=");
-      }
-      if (option = strstr(nonwhite, "UNITS="))
-      {
-	option += strlen("UNITS=");
-      }
-
-      /* check to see if it is a known synth command */
+      /* check to see if it is a known tube synth command */
 
       for (type_index = 0; tube_types[type_index][0]; type_index++) {
         if (strncmp(nonwhite,
               tube_types[type_index],
               strlen(tube_types[type_index])) == 0) {
-
-          rc = synth_tube_like(
-                 nonwhite,
-                 nonwhite + strlen(tube_types[type_index]),
-                 dat,synthfile);
+          synth_tube_like(nonwhite,dat,temp);
           break;
         }
       }
 
-      /* check to see if it is a known synth command */
+      if (! tube_types[type_index][0]) {
 
-      for (type_index = 0; band_types[type_index][0]; type_index++) {
-        if (strncmp(nonwhite,
-              band_types[type_index],
-              strlen(band_types[type_index])) == 0) {
+        /* check to see if it is a known band synth command */
 
-          rc = synth_band_like(
-                 nonwhite,
-                 nonwhite + strlen(band_types[type_index]),
-                 dat,synthfile);
-          break;
-	}
+        for (type_index = 0; band_types[type_index][0]; type_index++) {
+          if (strncmp(nonwhite,
+                band_types[type_index],
+                strlen(band_types[type_index])) == 0) {
+
+            synth_band_like(
+                   nonwhite,
+                   nonwhite + strlen(band_types[type_index]),
+                   dat,temp);
+            break;
+          }
+        }
       }
+    } else {
+      float foo;
 
-      // Close subfile and clean up.
-      if (synth_name)
-      {
-	fclose(synthfile);
-	free(synth_name);
-	synth_name = NULL;
+      if (sscanf(nonwhite,"0 SYNTH HOSE_RES %f",&foo) == 1) {
+        hose_res_angle = foo;
+      } else if (sscanf(nonwhite,"0 WRITE SYNTH HOSE_RES %f",&foo) == 1) {
+        hose_res_angle = foo;
       }
     }
   }
   fclose(dat);
-  fclose(outfile);
+  fclose(temp);
 
   printf("LSynth complete\n");
   return 1;

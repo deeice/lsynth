@@ -14,11 +14,9 @@ synth_tube(
   char                 *type,
   int                   n_constraints,
   LSL_part_usage       *constraints,
-  int                   length, /* in ribs */
-  char                 *units,
+  int                   ghost,
   int                   color,
-  FILE *output,
-  int                   ghost);
+  FILE *output);
 
 void mat_mult( PRECISION res[3][3], PRECISION lft[3][3], PRECISION rht[3][3]);
 void rotate( PRECISION res[3], PRECISION loc[3], PRECISION rot[3][3]);

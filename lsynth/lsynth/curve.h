@@ -15,7 +15,7 @@ synth_curve(
   LSL_part_usage       *end,
   LSL_part_usage       *segments,
   int                   n_segments,
-  LSL_tube_attributes  *attrib,
+  PRECISION             attrib,
   FILE                 *output);
 
 #ifdef _cplusplus

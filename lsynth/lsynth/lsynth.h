@@ -14,31 +14,27 @@
 #define PRECISION double
 #endif
 
-#define TEST_HOSE         "TEST_HOSE "
 #define RIBBED_HOSE       "RIBBED_HOSE "
-#define RIBBED_TUBE       "RIBBED_TUBE "
+#define RUBBER_HOSE       "RUBBER_HOSE "
+#define STRING            "STRING "
+#define MINIFIG_CHAIN     "MINIFIG_CHAIN "
 #define FLEXIBLE_HOSE     "FLEX_SYSTEM_HOSE_LD "
-#define FLEXIBLE_TUBE     "FLEX_SYSTEM_TUBE_LD "
 #define FLEX_CABLE        "FLEX_SYSTEM_CABLE "
 #define RIGID_HOSE        "FLEX_SYSTEM_HOSE "
-#define RIGID_TUBE        "FLEX_SYSTEM_TUBE "
 #define ELECTRIC_CABLE    "ELECTRIC_CABLE "
-#define PNEUMATIC_TUBE    "PNEUMATIC_TUBE "
 #define PNEUMATIC_HOSE    "PNEUMATIC_HOSE "
 #define FLEXIBLE_AXLE     "FLEXIBLE_AXLE "
 #define FIBER_OPTIC_CABLE "FIBER_OPTIC_CABLE "
-#define FIBRE_OPTIC_CABLE "FIBRE_OPTIC_CABLE "
 
-#define RUBBER_HOSE       "RUBBER_HOSE "
-
-#define ALL_HOSES TEST_HOSE,RIBBED_HOSE,RIBBED_TUBE,FLEX_CABLE,FLEXIBLE_HOSE,FLEXIBLE_TUBE,RIGID_HOSE,RIGID_TUBE,ELECTRIC_CABLE,PNEUMATIC_HOSE,PNEUMATIC_TUBE,FLEXIBLE_AXLE,FIBER_OPTIC_CABLE,FIBRE_OPTIC_CABLE,RUBBER_HOSE
+#define ALL_HOSES RIBBED_HOSE,FLEX_CABLE,FLEXIBLE_HOSE,RIGID_HOSE,ELECTRIC_CABLE,PNEUMATIC_HOSE,FLEXIBLE_AXLE,FIBER_OPTIC_CABLE,RUBBER_HOSE,STRING,MINIFIG_CHAIN
 
 #define RUBBER_BAND       "RUBBER_BAND "
+#define RUBBER_BELT       "RUBBER_BELT "
 #define CHAIN             "CHAIN "
 #define PLASTIC_TREAD     "PLASTIC_TREAD "
 #define RUBBER_TREAD      "RUBBER_TREAD "
 
-#define ALL_BANDS RUBBER_BAND,CHAIN,PLASTIC_TREAD,RUBBER_TREAD
+#define ALL_BANDS RUBBER_BAND,RUBBER_BELT,CHAIN,PLASTIC_TREAD,RUBBER_TREAD
 
 #define ACCY (1e-6)
 
@@ -54,12 +50,9 @@ typedef struct {
 } LSL_part_usage;
 
 typedef struct {
-  PRECISION exit_start, exit_stop;
-} LSL_tube_attributes;
-
-typedef struct {
   LSL_part_usage part;
   PRECISION      radius;
+  PRECISION      offset[3];
   int            inside;
   int            was_cross;
   int            cross;
@@ -75,5 +68,27 @@ typedef struct {
   int            n_steps;
   PRECISION      s_angle;
 } LSL_band_constraint;
+
+extern PRECISION hose_res_angle;
+
+void
+output_line(
+  FILE           *output,
+  int             ghost,
+  int             color,
+  PRECISION       a,
+  PRECISION       b,
+  PRECISION       c,
+  PRECISION       d,
+  PRECISION       e,
+  PRECISION       f,
+  PRECISION       g,
+  PRECISION       h,
+  PRECISION       i,
+  PRECISION       j,
+  PRECISION       k,
+  PRECISION       l,
+  char            *type);
+
 
 #endif

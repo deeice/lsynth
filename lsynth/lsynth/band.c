@@ -8,9 +8,244 @@
 #include "tube.h"
 #include <float.h>
 
-#define SCALE 2
-#define CHAIN_SCALE (1/16.0)
-#define TREAD_SCALE (1/18.5)
+#define FIXED   0
+#define FIXED3  1
+#define STRETCH 2
+
+typedef struct {
+  char     *part;         // LDraw part type
+  PRECISION orient[3][3]; // how to orient/scale it into the result
+  PRECISION offset[3];    // how to displace it into the result
+} part_t;
+
+typedef struct {
+  char     *type;   // name of thing being specified (e.g. RUBBER_BAND)
+  int       fill;   // method for synthesizing
+                    // FIXED - chain and tread are composed of fixed
+                    //         length parts
+                    // FIXED3 - special case for rubber tread.
+                    // STRETCH - for rubber bands
+  PRECISION scale;       // convert LDUs to number of parts
+  PRECISION delta;       // used to compute number of steps on arc
+  part_t    tangent;     // the part type used for tangent
+  part_t    arc;         // the part type used for going around constraints
+  part_t    start_trans; // for rubber treads, transition from arc to tangent
+  part_t    end_trans;   // for rubber treads, transition from tangent to arc
+} band_attrib_t;
+
+/*
+ * TYPE: <name> <scale> <delta> <mode>
+ * 1 <disp> <rot> <type
+ */
+band_attrib_t band_types[] =
+{
+  {
+    "RUBBER_BAND ",
+    STRETCH,
+    2.0,
+    1,
+    {
+      "4-4CYLI.DAT",
+      {
+        { 2,0,0 },
+        { 0,1,0 },
+        { 0,0,2 }
+      }
+    },
+    {
+      "4-4CYLI.DAT",
+      {
+        { 2,0,0 },
+        { 0,1,0 },
+        { 0,0,2 }
+      }
+    },
+  },
+  {
+    "RUBBER_BELT ",
+    STRETCH,
+    2.0,
+    1,
+    {
+      "box4o8a.DAT",
+      {
+        { 1.414,0,1.414 },
+        {     0,1,0 },
+        {-1.414,0,1.414 }
+      }
+    },
+    {
+      "box4o8a.DAT",
+      {
+        { 1.414,0,1.414 },
+        {     0,1,0 },
+        {-1.414,0,1.414 }
+      }
+    },
+  },
+  {
+    "CHAIN ",
+    FIXED,
+    1.0/16,
+    8,
+    { // tangent
+      "3711.DAT",
+      {
+        { 0, 1, 0 },
+        { 0, 0,-1 },
+        { -1,0, 0 }
+      },
+      {
+        0, 0, 16
+      }
+    },
+    { // arc
+      "3711.DAT",
+      {
+        { 0, -1, 0 },
+        { 0,  0, 1 },
+        { -1, 0, 0 }
+      },
+      {
+        0, 0, 0
+      }
+    }
+  },
+  {
+    "PLASTIC_TREAD ",
+    FIXED,
+    1.0/16,
+    8,
+    { // tangent
+      "3873.DAT",
+      {
+        {  0, 1, 0 },
+        {  0, 0,-1 },
+        { -1, 0, 0 }
+      },
+      {
+        0, 0, 16
+      }
+    },
+    { // arc
+      "3873.DAT",
+      {
+        { 0, -1, 0 },
+        { 0,  0, 1 },
+        { -1, 0, 0 }
+      },
+      {
+        0, 0, 0
+      }
+    }
+  },
+  {
+    "RUBBER_TREAD ",
+    FIXED3,
+    1.0/20,
+    4,
+    {
+      "680.DAT",
+      {
+        { 0, -1, 0 },
+        { 1,  0, 0 },
+        { 0,  0, 1 }
+      },
+      {
+        0, 32, 0
+      }
+    },
+    {
+      "682.DAT",
+      {
+        { -0.342,  0.940, 0 },
+        { -0.940, -0.342, 0 },
+        {      0,      0, 1 }
+      },
+      {
+        0, 32, 0
+      }
+    },
+    {
+      "681.DAT",
+      {
+        { -0.342,  0.940, 0 },
+        { -0.940, -0.342, 0 },
+        {      0,      0, 1 }
+      },
+      {
+        0, 32, 0
+      }
+    },
+    {
+      "681.DAT",
+      {
+        {  0.342,   0.940, 0 },
+        {  0.940,  -0.342, 0 },
+        {      0,      0,  1 }
+      },
+      {
+        0, 32, 0
+      }
+    },
+  },
+};
+
+struct {
+  char     *type;         // LDraw part name
+  PRECISION radius;       // Radius of circular part
+  PRECISION orient[3][3]; // How to orient it
+  PRECISION offset[3];    // How much to offset it.
+} radiai[] = {
+
+  // bushings/pulleys
+
+  {    "3736.DAT", 44, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "4185.DAT", 30, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "2983.DAT", 11, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "4265.DAT", 10, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {   "4265A.DAT", 10, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {   "4265B.DAT", 10, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {   "4265C.DAT", 10, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "13.DAT", 10, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "2736.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  {    "6628.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+
+  // axles
+
+  {    "3704.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  {   "32062.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  {    "4519.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  {    "6587.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  {    "3705.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  { "3705C01.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  {   "32073.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  {     "552.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  {    "3706.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  {    "3707.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  {    "3737.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+  { "3737C01.DAT",  4, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "3708.DAT",  4, {{0, 0, 1},{0,1, 0},{-1,0,0}}},
+
+  // axle joiner
+
+  {   "6538A.DAT", 10, {{0, 0, 1},{0,1, 0},{ 0,0,1}}},
+
+  // gears
+
+  {   "32007.DAT", 32, {{1, 0, 0},{0,1, 0},{ 0,0,1}}, { 0, 32, 0}},
+  {   "73071.DAT", 35, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "6573.DAT", 30, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  { 9   "4019.DAT", 20, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "6542.DAT", 20, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "3648.DAT", 30, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {   "60C01.DAT", 30, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {   "3650A.DAT", 30, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "3649.DAT", 50, {{1, 0, 0},{0,1, 0},{ 0,0,1}}},
+  {    "2855.DAT", 73, {{1, 0, 0},{0,0,-1},{ 0,1,0}}, { -8, 0, 0}},
+  {    "6539.DAT", 20, {{1, 0, 0},{0,1, 0},{ 0,1,0}}},
+  {    "LS00.DAT",  1, {{1, 0, 0},{0,0,-1},{ 0,1,0}}},
+};
 
 void
 calc_crosses(
@@ -62,8 +297,8 @@ calc_crosses(
 
 void
 calc_angles(
+  band_attrib_t *type,
   LSL_band_constraint *k,
-  char *type,
   FILE *output)
 {
   PRECISION first_x, first_y, last_x, last_y;
@@ -72,7 +307,6 @@ calc_angles(
   int i;
   float n;
   PRECISION pi = 2*atan2(1,0);
-  PRECISION delta;
 
   if (k->cross || ! k->inside) {
     first_x = k->end_angle.loc.x;
@@ -99,27 +333,15 @@ calc_angles(
 
   k->s_angle = angle;
 
-  if (strcmp(type,RUBBER_BAND) == 0) {
-    n = SCALE*(2*pi*k->radius);
-    delta = 1;
-  } else if (strcmp(type,CHAIN) == 0) {
-    n = CHAIN_SCALE*2*pi*k->radius;
-    delta = 8;
-  } else if (strcmp(type,PLASTIC_TREAD) == 0) {
-    n = CHAIN_SCALE * 2*pi*k->radius;
-    delta = 8;
-  } else if (strcmp(type,RUBBER_TREAD) == 0) {
-    n = TREAD_SCALE * 2*pi*k->radius;
-    delta = 4;
-  }
+  n = type->scale * 2 * pi * k->radius + 0.5;
 
-  if (strcmp(type,RUBBER_TREAD) == 0) {
+  if (type->fill == FIXED3) {
     PRECISION circ;
     if (angle < 0) {
-      angle = pi/2 - angle;
+      angle = - angle;
     }
-    circ = 2*angle*k->radius;
-    k->n_steps = circ*TREAD_SCALE-1;
+    circ = angle*2*k->radius;
+    k->n_steps = circ*type->scale+0.5;
   } else {
 
     // circumference
@@ -130,7 +352,7 @@ calc_angles(
       ta = angle - 2*pi*(1-f);
       dx = k->radius*cos(ta) + k->part.loc.x - last_x;
       dy = k->radius*sin(ta) + k->part.loc.y - last_y;
-      if (sqrt(dx*dx+dy*dy) < delta) {
+      if (sqrt(dx*dx+dy*dy) < type->delta) {
         break;
       }
     }
@@ -324,7 +546,7 @@ rotate_point3(
 }
 
 int draw_arc_line(
-  char *type,
+  band_attrib_t *type,
   LSL_band_constraint *f_constraint,
   int color,
   int draw_line,
@@ -339,73 +561,10 @@ int draw_arc_line(
   PRECISION angle, at;
   PRECISION f[3],s[3],rf[3],rs[3];
   PRECISION orient[3][3];
-  PRECISION part_orient[3][3];
   PRECISION rot[3][3];
-  PRECISION offset[3];
   PRECISION roffset[3];
   PRECISION dx,dy,dz;
-  char     *seg_type;
-
-  part_orient[0][0] = 1;
-  part_orient[0][1] = 0;
-  part_orient[0][2] = 0;
-  part_orient[1][0] = 0;
-  part_orient[1][1] = 1;
-  part_orient[1][2] = 0;
-  part_orient[2][0] = 0;
-  part_orient[2][1] = 0;
-  part_orient[2][2] = 1;
-
-  offset[0] = 0;
-  offset[1] = 0;
-  offset[2] = 0;
-
-  if (strcmp(type,RUBBER_BAND) == 0) {
-    seg_type = "LS31.dat";
-  } else if (strcmp(type,CHAIN) == 0) {
-    seg_type = "3711.DAT";
-    part_orient[0][0] = 0;
-    part_orient[0][1] = 1;
-    part_orient[0][2] = 0;
-    part_orient[1][0] = 0;
-    part_orient[1][1] = 0;
-    part_orient[1][2] = -1;
-    part_orient[2][0] = -1;
-    part_orient[2][1] = 0;
-    part_orient[2][2] = 0;
-    offset[0] = 0;
-    offset[1] = 0;
-    offset[2] = 16;
-  } else if (strcmp(type,PLASTIC_TREAD) == 0) {
-    seg_type = "3873.DAT";
-
-    part_orient[0][0] = 0;
-    part_orient[0][1] = 1;
-    part_orient[0][2] = 0;
-    part_orient[1][0] = 0;
-    part_orient[1][1] = 0;
-    part_orient[1][2] = -1;
-    part_orient[2][0] = -1;
-    part_orient[2][1] = 0;
-    part_orient[2][2] = 0;
-    offset[0] = 0;
-    offset[1] = 0;
-    offset[2] = 16;
-  } else if (strcmp(type,RUBBER_TREAD) == 0) {
-    seg_type = "680.DAT";
-    part_orient[0][0] = 0;
-    part_orient[0][1] = -1;
-    part_orient[0][2] = 0;
-    part_orient[1][0] = 1;
-    part_orient[1][1] = 0;
-    part_orient[1][2] = 0;
-    part_orient[2][0] = 0;
-    part_orient[2][1] = 0;
-    part_orient[2][2] = 1;
-    offset[0] = 0;
-    offset[1] = 32;
-    offset[2] = 0;
-  }
+  int steps;
 
   if (draw_line) {
 
@@ -444,23 +603,26 @@ int draw_arc_line(
         f_constraint->start_line.orient[2][2] = L1/L2;
       }
 
-      if (strcmp(type,RUBBER_BAND) == 0) {
-        n = L2*SCALE;
-      } else if (strcmp(type,CHAIN) == 0 || strcmp(type,PLASTIC_TREAD) == 0) {
-        n = L2*CHAIN_SCALE;
-      } else if (strcmp(type,RUBBER_TREAD) == 0) {
-        n = L2*TREAD_SCALE;
-      }
-
       // rotate the orientation of tangent line and part_orient
 
-      mat_mult(rot,f_constraint->start_line.orient,part_orient);
+      mat_mult(rot,f_constraint->start_line.orient,type->tangent.orient);
 
       // rotate the offset by
 
-      rotate_point3(roffset,offset,rot);
+      rotate_point3(roffset,type->tangent.offset,rot);
 
-      for (i = 0; i < n; i++) {
+      if (type->fill == STRETCH) {
+        n = 1;
+        steps = 0;
+      } else if (type->fill == FIXED3) {
+        n = L2*type->scale+0.5;
+        steps = 1;
+      } else {
+        n = L2*type->scale+0.5;
+        steps = 0;
+      }
+
+      for (i = steps; i < n; i++) {
         PRECISION loc[3];
         PRECISION floc[3];
         PRECISION trot[3][3];
@@ -475,10 +637,28 @@ int draw_arc_line(
         loc[1] += absolute->loc.y;
         loc[2] += absolute->loc.z;
 
+        if (type->fill == STRETCH) {
+          PRECISION scale[3][3];
+          PRECISION lrot[3][3];
+          int i,j;
+
+          for (i = 0; i < 3; i++) {
+            for (j = 0; j < 3; j++) {
+              lrot[i][j] = rot[i][j];
+              scale[i][j] = 0;
+            }
+          }
+          scale[0][0] = 1;
+          scale[1][1] = L2;
+          scale[2][2] = 1;
+          mat_mult(rot,lrot,scale);
+        }
+
         mat_mult(trot,absolute->orient,rot);
 
-        fprintf(output,"%s1 %d %f %f %f %f %f %f %f %f %f %f %f %f %s\n",
-          ghost ? "0 GHOST " : "",
+        output_line(
+          output,
+          ghost,
           color,
           loc[0],loc[1],loc[2],
           trot[0][0],
@@ -490,98 +670,47 @@ int draw_arc_line(
           trot[2][0],
           trot[2][1],
           trot[2][2],
-          seg_type);
+          type->tangent.part);
       }
     }
   }
 
   /* now for the arc */
 
-  if (strcmp(type,RUBBER_BAND) == 0) {
-    seg_type = "LS31.dat";
-    n = 2*pi*f_constraint->radius*SCALE;
-    angle = f_constraint->s_angle;
-  } else if (strcmp(type,CHAIN) == 0) {
-    seg_type = "3711.DAT";
-    n = 2*pi*f_constraint->radius*CHAIN_SCALE;
-    part_orient[0][0] = 0;
-    part_orient[0][1] = -1;
-    part_orient[0][2] = 0;
-    part_orient[1][0] = 0;
-    part_orient[1][1] = 0;
-    part_orient[1][2] = 1;
-    part_orient[2][0] = -1;
-    part_orient[2][1] = 0;
-    part_orient[2][2] = 0;
-    offset[0] = 0;
-    offset[1] = 0;
-    offset[2] = 0;
-
-    if (strcmp(f_constraint->part.type,"2855.DAT") == 0) {
-      offset[0] = -8;
-      offset[1] = 0;
-      offset[2] = 0;
-    }
-
-    angle = f_constraint->s_angle;
-  } else if (strcmp(type,PLASTIC_TREAD) == 0) {
-    seg_type = "3873.DAT";
-    n = 2*pi*f_constraint->radius*CHAIN_SCALE;
-    part_orient[0][0] = 0;
-    part_orient[0][1] = -1;
-    part_orient[0][2] = 0;
-    part_orient[1][0] = 0;
-    part_orient[1][1] = 0;
-    part_orient[1][2] = 1;
-    part_orient[2][0] = -1;
-    part_orient[2][1] = 0;
-    part_orient[2][2] = 0;
-    offset[0] = 0;
-    offset[1] = 0;
-    offset[2] = 0;
-
-    if (strcmp(f_constraint->part.type,"2855.DAT") == 0) {
-      offset[0] = -8;
-      offset[1] = 0;
-      offset[2] = 0;
-    }
-
-    angle = f_constraint->s_angle;
-  } else if (strcmp(type,RUBBER_TREAD) == 0) {
-    seg_type = "682.DAT";
-    n = 2*pi*f_constraint->radius*CHAIN_SCALE;
-    part_orient[0][0] = -0.342;
-    part_orient[0][1] = 0.940;
-    part_orient[0][2] = 0;
-    part_orient[1][0] = -0.940;
-    part_orient[1][1] = -0.342;
-    part_orient[1][2] = 0;
-    part_orient[2][0] = 0;
-    part_orient[2][1] = 0;
-    part_orient[2][2] = 1;
-
-    offset[0] = 0;
-    offset[1] = 32;
-    offset[2] = 0;
-
-    angle = f_constraint->s_angle;
-  }
+  n = 2*pi*f_constraint->radius*type->scale + 0.5;
+  angle = f_constraint->s_angle;
 
   f[0] = f_constraint->radius * cos(angle);
   f[1] = f_constraint->radius * sin(angle);
   f[2] = 0;
 
-  for (i = 1; i < f_constraint->n_steps; i++) {
+  if (type->fill == FIXED3) {
+    steps = f_constraint->n_steps + 2;
+  } else {
+    steps = f_constraint->n_steps;
+  }
+
+  for (i = 1; i < steps; i++) {
     PRECISION loc[3];
     PRECISION floc[3];
     PRECISION trot[3][3];
+    part_t   *part;
+
+    if (type->fill == FIXED3) {
+       if (i == 1) {
+         part = &type->start_trans;
+       } else if (i+1 == steps) {
+         part = &type->end_trans;
+       } else {
+         part = &type->arc;
+       }
+    } else {
+      part = &type->arc;
+    }
 
     s[0] = f_constraint->radius * cos(angle + 2*pi*i/n);
     s[1] = f_constraint->radius * sin(angle + 2*pi*i/n);
     s[2] = 0;
-
-    //rotate(rf,f,f_constraint->part.orient);
-    //rotate(rs,s,f_constraint->part.orient);
 
     dx = s[0] - f[0];
     dy = s[1] - f[1];
@@ -612,11 +741,11 @@ int draw_arc_line(
       orient[2][2] =  L1/L2;
     }
 
-    mat_mult(rot,orient,part_orient);
+    mat_mult(rot,orient,part->orient);
 
     // rotate the offset by
 
-    rotate_point3(roffset,offset,rot);
+    rotate_point3(roffset,f_constraint->offset,rot);
 
     floc[0] = f[0] + f_constraint->part.loc.x - roffset[0];
     floc[1] = f[1] + f_constraint->part.loc.y - roffset[1];
@@ -630,8 +759,8 @@ int draw_arc_line(
 
     mat_mult(trot,absolute->orient,rot);
 
-    fprintf(output,"%s1 %d %f %f %f %f %f %f %f %f %f %f %f %f %s\n",
-      ghost ? "0 GHOST " : "",
+    output_line(output,
+      ghost,
       color,
       loc[0],loc[1],loc[2],
       trot[0][0],
@@ -643,7 +772,7 @@ int draw_arc_line(
       trot[2][0],
       trot[2][1],
       trot[2][2],
-      seg_type);
+      part->part);
 
     f[0] = s[0];
     f[1] = s[1];
@@ -686,7 +815,18 @@ synth_band(
   PRECISION xangle,yangle,zangle;
   PRECISION xrot[3][3],yrot[3][3],zrot[3][3],trot[3][3];
   int layer = 0;
-  //PRECISION pi = 2*atan2(1,0);
+  band_attrib_t *band_type = NULL;
+  LSL_band_constraint save_constraint;
+
+  for (i = 0; i < sizeof(band_types)/sizeof(band_types[0]); i++) {
+    if (strcmp(type,band_types[i].type) == 0) {
+      band_type = &band_types[i];
+      break;
+    }
+  }
+  if (band_type == NULL) {
+    return 0;
+  }
 
   first = -1;
 
@@ -703,69 +843,36 @@ synth_band(
     } else if (strcmp(constraints[i].part.type,"OUTSIDE") == 0) {
       inside = 0;
     } else if (strcmp(constraints[i].part.type,"CROSS") == 0) {
-      //cross ^= 1;
-      //was_cross = 1;
       inside ^= 1;
 
-    /* Pulleys/Pins */
+    } else {
+      int j;
 
-    } else if (strcmp(constraints[i].part.type,"3736.DAT") == 0) {
-      constraints[i].radius = 44;
-    } else if (strcmp(constraints[i].part.type,"4185.DAT") == 0) {
-      constraints[i].radius = 30;
-    } else if (strcmp(constraints[i].part.type,"2983.DAT") == 0) {
-      constraints[i].radius = 11;
-    } else if (strcmp(constraints[i].part.type,"4265C.DAT") == 0 ||
-               strcmp(constraints[i].part.type,"4265A.DAT") == 0 ||
-               strcmp(constraints[i].part.type,"4265B.DAT") == 0 ||
-               strcmp(constraints[i].part.type,"3713.DAT") == 0) {
-      constraints[i].radius = 10;
-    } else if (strcmp(constraints[i].part.type,"2736.DAT") == 0 ||
-               strcmp(constraints[i].part.type,"50.DAT") == 0) {
-      constraints[i].radius = 4;
+      // search the constraints table
 
-    /* Axles */
-    } else if (strcmp(constraints[i].part.type,"3704.DAT") == 0 ||
-               strcmp(constraints[i].part.type,"32062.DAT") == 0 ||
-               strcmp(constraints[i].part.type,"4519.DAT") == 0 ||
-               strcmp(constraints[i].part.type,"6587.DAT") == 0 ||
-               strcmp(constraints[i].part.type,"3705.DAT") == 0 ||
-               strcmp(constraints[i].part.type,"3705C01.DAT") == 0 ||
-               strcmp(constraints[i].part.type,"32073.DAT") == 0 ||
-               strcmp(constraints[i].part.type,"552.DAT") == 0 ||
-               strcmp(constraints[i].part.type,"3706.DAT") == 0 ||
-               strcmp(constraints[i].part.type,"3707.DAT") == 0 ||
-               strcmp(constraints[i].part.type,"3737.DAT") == 0 ||
-               strcmp(constraints[i].part.type,"3737C01.DAT") == 0 ||
-               strcmp(constraints[i].part.type,"3708.DAT") == 0) {
+      for (j = 0; j < sizeof(radiai)/sizeof(radiai[0]); j++) {
+        if (strcmp(constraints[i].part.type,radiai[j].type) == 0) {
+          PRECISION torient[3][3];
 
-      constraints[i].radius = 4;
+          torient[0][0] = constraints[i].part.orient[0][0];
+          torient[0][1] = constraints[i].part.orient[0][1];
+          torient[0][2] = constraints[i].part.orient[0][2];
+          torient[1][0] = constraints[i].part.orient[1][0];
+          torient[1][1] = constraints[i].part.orient[1][1];
+          torient[1][2] = constraints[i].part.orient[1][2];
+          torient[2][0] = constraints[i].part.orient[2][0];
+          torient[2][1] = constraints[i].part.orient[2][1];
+          torient[2][2] = constraints[i].part.orient[2][2];
 
-    /* tread parts */
+          mat_mult(constraints[i].part.orient,radiai[j].orient,torient);
 
-    } else if (strcmp(constraints[i].part.type,"32007.DAT") == 0) {
-      constraints[i].radius = 30;
-
-    /* gears */
-
-    } else if (strcmp(constraints[i].part.type,"73071.DAT") == 0) {
-      constraints[i].radius = 35;
-    } else if (strcmp(constraints[i].part.type,"6573.DAT") == 0) {
-      constraints[i].radius = 30;
-    } else if (strcmp(constraints[i].part.type,"4019.DAT") == 0) {
-      constraints[i].radius = 20;
-    } else if (strcmp(constraints[i].part.type,"6542.DAT") == 0) {
-      constraints[i].radius = 20;
-    } else if (strcmp(constraints[i].part.type,"3648.DAT") == 0) {
-      constraints[i].radius = 30;
-    } else if (strcmp(constraints[i].part.type,"60C01.DAT") == 0) {
-      constraints[i].radius = 30;
-    } else if (strcmp(constraints[i].part.type,"3650A.DAT") == 0) {
-      constraints[i].radius = 30;
-    } else if (strcmp(constraints[i].part.type,"3649.DAT") == 0) {
-      constraints[i].radius = 50;
-    } else if (strcmp(constraints[i].part.type,"2855.DAT") == 0) {
-      constraints[i].radius = 73;
+          constraints[i].radius = radiai[j].radius;
+          constraints[i].offset[0] = radiai[j].offset[0];
+          constraints[i].offset[1] = radiai[j].offset[1];
+          constraints[i].offset[2] = radiai[j].offset[2];
+          break;
+        }
+      }
     }
     if (first == -1 && constraints[i].radius) {
       first = i;
@@ -804,30 +911,6 @@ synth_band(
   xangle = asin(absolute.orient[1][2]);
   yangle = asin(-absolute.orient[0][2]);
   zangle = -asin(-absolute.orient[0][1]);
-
-#if 0
-  {
-    /* 0 1 2 no
-       0 2 1 (closer)
-       1 0 2 no
-       1 2 0 no
-       2 0 1 (closer)
-       2 1 0
-     */
-    int i = 0, j = 2, k = 1;
-    double sy = sqrt(absolute.orient[i][j]*absolute.orient[i][j] +
-                     absolute.orient[i][k]*absolute.orient[i][k]);
-    if (sy > 16*FLT_EPSILON) {
-      xangle = atan2(absolute.orient[i][j], absolute.orient[i][k]);
-      zangle = atan2(sy, absolute.orient[i][i]);
-      yangle = atan2(absolute.orient[j][i], -absolute.orient[k][i]);
-    } else {
-      xangle = atan2(-absolute.orient[j][k], absolute.orient[j][j]);
-      zangle = atan2(sy, absolute.orient[i][i]);
-      yangle = 0;
-    }
-  }
-#endif
 
   xrot[0][0] = 1;
   xrot[0][1] = 0;
@@ -877,7 +960,18 @@ synth_band(
     }
   }
 
-  //mat_mult(absolute.orient,xrot,yrot);
+
+  for (i = 0; i < sizeof(radiai)/sizeof(radiai[0]); i++) {
+    if (strcmp(constraints[0].part.type,radiai[i].type) == 0) {
+      int j,k;
+      for (j = 0; j < 3; j++) {
+        for (k = 0; k < 3; k++) {
+          save_constraint.part.orient[j][k] = constraints[0].part.orient[j][k];
+          constraints[0].part.orient[j][k] = radiai[i].orient[j][k];
+        }
+      }
+    }
+  }
 
   /* figure out the tangents' intersections with circles */
 
@@ -941,7 +1035,8 @@ synth_band(
         if (constraints[i].radius) {
           int j;
           for (j = 1; j < constraints[i].n_crossings; j++) {
-          constraints[i].crossings[j].loc.z = (constraints[i].layer-layer/2)*BAND_DIAM + layer_offset;
+            constraints[i].crossings[j].loc.z =
+              (constraints[i].layer-layer/2)*BAND_DIAM + layer_offset;
           }
         }
       }
@@ -956,7 +1051,7 @@ synth_band(
 
   for (i = 0; i < n_constraints; i++) {
     if (constraints[i].radius) {
-      calc_angles(&constraints[i], type, output);
+      calc_angles(band_type,&constraints[i],output);
     }
   }
 
@@ -965,6 +1060,13 @@ synth_band(
    * and put all parts back to original absolute
    * coordinates.
    *****************************************************/
+
+  for (i = 0; i < 3; i++) {
+    int j;
+    for (j = 0; j < 3; j++) {
+      constraints[0].part.orient[i][j] = save_constraint.part.orient[i][j];
+    }
+  }
 
   fprintf(output,"0 SYNTH SYNTHESIZED BEGIN\n");
 
@@ -975,7 +1077,7 @@ synth_band(
       for (j = i+1; j <= n_constraints; j++) {
         if (constraints[j].radius) {
           draw_arc_line(
-            type,
+            band_type,
             &constraints[i],
             color,
             n_constraints > 1,
@@ -986,7 +1088,7 @@ synth_band(
           break;
         }
       }
-      if (j == n_constraints) {
+      if (j >= n_constraints) {
         i++;
       }
     } else {
