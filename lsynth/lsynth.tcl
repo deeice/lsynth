@@ -22,7 +22,7 @@ proc BrowseIF {} {
 
 proc BrowseOF {} {
     global outfile modeldir
-    set outfile [tk_getOpenFile -initialdir $modeldir]
+    set outfile [tk_getSaveFile -initialdir $modeldir]
 }
 
 proc Synthesize {} {
@@ -65,12 +65,13 @@ button .f.row4.synthesize -text "Synthesize" -command {Synthesize}
 pack .f.row4.synthesize -side top
 
 frame .f.row5
+pack .f.row5 -side top -fill y
 set log [text .f.row5.log -width 80 -height 20 \
     -borderwidth 2 -relief raised -setgrid true \
     -yscrollcommand {.f.row5.scroll set}]
 scrollbar .f.row5.scroll -command {.f.row5.log yview}
 pack .f.row5.scroll -side right -fill both -expand true
-pack .f.row5 -side top -fill both -expand true
+pack .f.row5.log -side top -fill both -expand true
 
 $log insert end "Welcome to LSynth, a bendable part synthesizer for LDRAW files."
 $log insert end \n
