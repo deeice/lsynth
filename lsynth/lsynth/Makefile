@@ -14,4 +14,4 @@ OBJS = $(SRCS:.c=.o)
 all	: lsynthcp
 
 lsynthcp:   $(OBJS) $(LIBS)
-	$(CC) $(CFLAGS) $(OBJS) -o lsynthcp.exe
+	$(CC) $(CFLAGS) $(OBJS) -lm -o lsynthcp.exe

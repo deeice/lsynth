@@ -6,6 +6,7 @@
 #include "lsynthcp.h"
 #include "band.h"
 #include "hose.h"
+#include <math.h>
 #include <float.h>
 
 /*
