@@ -95,7 +95,10 @@ synth_tube(
   PRECISION reverse[3][3];
   PRECISION t[3][3];
   PRECISION reversed[3][3];
+  PRECISION total_segments = 0;
+  PRECISION total_length = 0;
 
+  // Apply initial velocity (or stiffness) of the hose?
   if (strcmp(type,RIBBED_HOSE)) {
 
     attrib.exit_start = 50;
@@ -106,6 +109,7 @@ synth_tube(
     attrib.exit_stop  = 40;
   }
 
+  // Rotate 180 degrees around Z axis.  (The tab on LS00.dat is on the Z axis)
   reverse[0][0] = 1;
   reverse[0][1] = 0;
   reverse[0][2] = 0;
@@ -117,6 +121,11 @@ synth_tube(
   reverse[2][2] = cos(pi);
 
   // determine the total minimum length
+  if (strncmp(type,RUBBER_HOSE,strlen(RUBBER_HOSE)) == 0)
+  for (c = 0; c < n_constraints - 1; c++) {
+
+    total_length += constr_len(&constraints[c],&constraints[c+1], segments, MAX_SEGMENTS, &attrib, output);
+  }
 
   segment = 0;
 
@@ -491,6 +500,108 @@ synth_tube(
           segments[i].orient[2][1],
           segments[i].orient[2][2],
           "AXLE.DAT");
+        segment++;
+      }
+
+    } else if (strncmp(type,RUBBER_HOSE,strlen(RUBBER_HOSE)) == 0) {
+
+      /* 
+      // Make this easier by using lsXX.dat (mirror of ls00.dat) at hose end.
+      // LsXX.dat just includes ls00.dat but facing the opposite direction.
+      // It should make it easier to visualize where the ribbed segments and
+      // the 755.dat hose ends go.
+      // Or maybe just look for 2 755.dat parts.
+      // Or maybe I can do this outside and insert the ls00.dats for lsynthcp.
+      */
+
+      /* This is a fixed length (but sorta stretchy) hose ~ 50 segments. */
+      /* Calculate total length and divvy up 50 segs over the total. */
+
+      // n_segments = real_length / 2; // 2 LDU hose segments.
+      n_segments = 50 * real_length / total_length;
+
+      // Probably need to add a seg to the last section for truncation errors.
+      total_segments += n_segments;
+      if (c == n_constraints-2) {
+	if (total_segments < 50)
+	  n_segments += 50-total_segments;
+      }
+
+      if (n_segments > MAX_SEGMENTS) {
+        n_segments = MAX_SEGMENTS;
+      }
+
+      synth_curve(&constraints[c],&constraints[c+1],segments,n_segments,&attrib,output);
+
+      // Add rubber hose start part 
+      if (c == 0) {
+	t[1][0] = 0; // (5 = height of hose end base)
+	t[1][1] = 5; // Translate the hose start part in the opposite 
+	t[1][2] = 0; // direction of the start constraint.  
+	rotate( t[0], t[1], constraints[0].orient);
+        mat_mult(reversed,constraints[0].orient,reverse);
+        fprintf(output,"%s1 %d %f %f %f %f %f %f %f %f %f %f %f %f %s\n",
+          ghost ? "0 GHOST " : "",
+          color,
+          constraints[c].loc.x + t[0][0],
+          constraints[c].loc.y + t[0][1],
+          constraints[c].loc.z + t[0][2],
+          reversed[0][0],
+          reversed[0][1],
+          reversed[0][2],
+          reversed[1][0],
+          reversed[1][1],
+          reversed[1][2],
+          reversed[2][0],
+          reversed[2][1],
+          reversed[2][2],
+          "755.DAT");
+        segment++;
+      }
+
+      for (i = first; i < n_segments-1; i++) {
+        mat_mult(reversed,segments[i].orient,reverse);
+        fprintf(output,"%s1 %d %f %f %f %f %f %f %f %f %f %f %f %f %s\n",
+          ghost ? "0 GHOST " : "",
+          color,
+          segments[i].loc.x,
+          segments[i].loc.y,
+          segments[i].loc.z,
+	  reversed[0][0],
+          reversed[0][1],
+          reversed[0][2],
+          reversed[1][0],
+          reversed[1][1],
+          reversed[1][2],
+          reversed[2][0],
+          reversed[2][1],
+          reversed[2][2],
+	  "756.DAT"); // Could also use 754.DAT with one 756.DAT at the end.
+        segment++;
+      }
+
+      // Add rubber hose end part 
+      if (c == n_constraints-2) {
+	t[1][0] = 0; // (5 = height of hose end base)
+	t[1][1] = -5; // Translate hose end in the direction of end constraint.
+	t[1][2] = 0;
+	rotate( t[0], t[1], constraints[+1].orient);
+        fprintf(output,"%s1 %d %f %f %f %f %f %f %f %f %f %f %f %f %s\n",
+          ghost ? "0 GHOST " : "",
+          color,
+          constraints[c+1].loc.x + t[0][0],
+          constraints[c+1].loc.y + t[0][1],
+          constraints[c+1].loc.z + t[0][2],
+          constraints[c+1].orient[0][0],
+          constraints[c+1].orient[0][1],
+          constraints[c+1].orient[0][2],
+          constraints[c+1].orient[1][0],
+          constraints[c+1].orient[1][1],
+          constraints[c+1].orient[1][2],
+          constraints[c+1].orient[2][0],
+          constraints[c+1].orient[2][1],
+          constraints[c+1].orient[2][2],
+          "755.DAT");
         segment++;
       }
 
