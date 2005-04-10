@@ -22,11 +22,13 @@ typedef struct {
 
 extern PRECISION hose_res_angle;
 extern PRECISION band_res;
+extern int group_size;
 
 void
 output_line(
   FILE           *output,
   int             ghost,
+  char           *group,
   int             color,
   PRECISION       a,
   PRECISION       b,

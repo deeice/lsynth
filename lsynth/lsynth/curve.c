@@ -43,11 +43,11 @@ void orient(
         segments[i].orient[1][0] = 0;
         segments[i].orient[2][0] = 0;
         segments[i].orient[0][1] = 0;
-        segments[i].orient[1][1] = 1;
-        segments[i].orient[2][1] = 0;
+        segments[i].orient[1][1] = 0;
+        segments[i].orient[2][1] =-1;
         segments[i].orient[0][2] = 0;
-        segments[i].orient[1][2] = 0;
-        segments[i].orient[2][2] = 1;
+        segments[i].orient[1][2] = 1;
+        segments[i].orient[2][2] = 0;
       } else {
         segments[i].orient[0][0] =  dy/L1;  //  cos
         segments[i].orient[1][0] = -dx/L1;  //  sin
@@ -131,16 +131,6 @@ synth_curve(
       (1 - time) * (1 - time) * 3 * time * (start->offset[2] - start_speed_v[2]) +
       (1 - time) * 3 * time * time * (end->offset[2] - stop_speed_v[2]) +
             time * time * time * end->offset[2];
-
-#ifdef DEBUG
-    if (output) {
-      fprintf(output,"0 XYZ (%f %f %f %f)\n",
-        (1 - time) * (1 - time) * (1 - time) * start->offset[2],
-        (1 - time) * (1 - time) * 3 * time * (start->offset[2] - start_speed_v[2]),
-        (1 - time) * 3 * time * time * (end->offset[2] - stop_speed_v[2]),
-        time * time * time * end->offset[2]);
-    }
-#endif
   }
 
   ptp_sum = 0;
@@ -167,6 +157,9 @@ synth_curve(
     ptp = sqrt(x*x + y*y + z*z);
 
     ratio = ptp*n_segments/ptp_sum;
+    if (ratio == 0) {
+      ratio = 1e-20;
+    }
     i_time = 1.0/(n_segments*ratio);
     i_time_sum += i_time;
   }
@@ -183,18 +176,15 @@ synth_curve(
 
     ptp = sqrt(x * x + y * y + z * z);  /* E */
     ratio = ptp*n_segments/ptp_sum;     /* F */
+    if (ratio == 0) {
+      ratio = 1e-20;
+    }
     i_time = 1.0/(n_segments*ratio);    /* G */
+    i_time_sum2 += i_time;
 
     foo = 1.0/n_segments;
     foo /= ratio;
     foo /= i_time_sum;
-
-#ifdef DEBUG
-    if (output) {
-      fprintf(output,"0 XYZ %f %f %f PTP %f ITIME %f ",segments[i].offset[0],segments[i].offset[1],segments[i].offset[2],ptp,i_time_sum2);
-    }
-#endif
-    i_time_sum2 += i_time;
 
     segments[i].offset[0] =
       (1 - n_time) * (1 - n_time) * (1 - n_time) * start->offset[0] +
@@ -215,12 +205,6 @@ synth_curve(
        n_time * n_time * n_time * end->offset[2];
 
     n_time += foo;  /* H */
-
-#ifdef DEBUG
-    if (output) {
-      fprintf(output," XYZ %f %f %f \n",segments[i].offset[0],segments[i].offset[1],segments[i].offset[2]);
-    }
-#endif
   }
 
   segments[i].offset[0] =

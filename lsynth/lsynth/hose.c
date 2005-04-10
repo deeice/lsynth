@@ -160,9 +160,10 @@ merge_segments_angular(
       a = b++;
     }
   }
-  if (n == 0) {
-    segments[1] = segments[*n_segments-1];
-    n = 2;
+  if (n < 3) {
+    segments[1] = segments[*n_segments-2];
+    segments[2] = segments[*n_segments-1];
+    n = 3;
   } else {
     segments[n++] = segments[b-1];
   }
@@ -211,6 +212,7 @@ void
 output_line(
   FILE           *output,
   int             ghost,
+  char           *group,
   int             color,
   PRECISION       a,
   PRECISION       b,
@@ -226,11 +228,15 @@ output_line(
   PRECISION       l,
   char            *type)
 {
+  if (group) {
+    fprintf(output,"0 MLCAD BTG %s\n",group);
+  }
   fprintf(output,"%s1 %d %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f %s\n",
       ghost ? "0 GHOST " : "",
       color,
       a,b,c,d,e,f,g,h,i,j,k,l,
       type);
+  group_size++;
 }
 
 /*
@@ -244,6 +250,7 @@ void
 render_hose_segment(
   hose_attrib_t  *hose,
   int             ghost,
+  char           *group,
   int             color,
   part_t         *segments,
   int             n_segments,
@@ -307,7 +314,11 @@ render_hose_segment(
       type = hose->start.type;
       matrixmult3(scaled,hose->start.orient,scale);
     } else if (i == n_segments-2 && last) {
+      PRECISION offset[3];
       type = hose->end.type;
+      offset[0] = 0; offset[1] = l; offset[2] = 0;
+      vectorrot(offset,segments[i].orient);
+      vectoradd(segments[i].offset,offset);
       matrixmult3(scaled,hose->end.orient,scale);
     } else {
       type = hose->mid.type;
@@ -325,12 +336,48 @@ render_hose_segment(
     matrixmult3(twisted,twist,scaled);
     matrixmult3(reversed,segments[i].orient,twisted);
 
-    output_line(output,ghost,color,
+    output_line(output,ghost,group,color,
       segments[i].offset[0], segments[i].offset[1], segments[i].offset[2],
       reversed[0][0], reversed[0][1], reversed[0][2],
       reversed[1][0], reversed[1][1], reversed[1][2],
       reversed[2][0], reversed[2][1], reversed[2][2],
       type);
+  }
+}
+
+void
+adjust_constraint(
+  part_t *part,
+  part_t *orig,
+  int     last)
+{
+  int i;
+  PRECISION m[3][3];
+
+  *part = *orig;
+
+  for (i = 0; i < N_HOSE_CONSTRAINTS; i++) {
+    if (strcmp(part->type,hose_constraints[i].type) == 0) {
+
+      vectorsub(part->offset,orig->offset);
+      matrixinv(m,orig->orient);
+      matrixmult(part->orient,m);
+
+      vectoradd(part->offset,hose_constraints[i].offset);
+      vectorrot(part->offset,hose_constraints[i].orient);
+
+      matrixmult(part->orient,hose_constraints[i].orient);
+
+      matrixmult(part->orient,orig->orient);
+
+      vectoradd(part->offset,orig->offset);
+
+      if (hose_constraints[i].attrib && last) {
+        matrixcp(m,part->orient);
+        matrixneg(part->orient,m);
+      }
+      break;
+    }
   }
 }
 
@@ -341,6 +388,7 @@ render_hose(
   part_t         *constraints,
   PRECISION       angular_res,
   int             ghost,
+  char           *group,
   int             color,
   FILE *output)
 {
@@ -348,61 +396,35 @@ render_hose(
   part_t    mid_constraint;
   PRECISION total_twist = 0;
 
+  group_size = 0;
+
   fprintf(output,"0 SYNTH SYNTHESIZED BEGIN\n");
 
   mid_constraint = constraints[0];
 
   for (c = 0; c < n_constraints - 1; c++) {
-    int i;
+    part_t first,second;
 
-    part_t first,       second;
-    part_t attrib;
+    // reorient imperfectly oriented or displaced constraint types
 
-    // rotate and offset the constraint parts here.
+    adjust_constraint(&first,&mid_constraint,0);
 
-    first  = mid_constraint;
+    // reorient imperflectly oriented or displaced constraint types
 
-    for (i = 0; i < N_HOSE_CONSTRAINTS; i++) {
-      if (strcmp(first.type,hose_constraints[i].type) == 0) {
-        PRECISION v[3];
-
-        matrixmult(first.orient,hose_constraints[i].orient);
-
-        vectorrot3(v,hose_constraints[i].offset,first.orient);
-        vectoradd(first.offset,v);
-        break;
-      }
-    }
-
-    second = constraints[c+1];
-
-    for (i = 0; i < N_HOSE_CONSTRAINTS; i++) {
-      if (strcmp(second.type,hose_constraints[i].type) == 0) {
-        PRECISION m[3][3];
-        PRECISION v[3];
-
-        matrixmult(second.orient,hose_constraints[i].orient);
-
-        if (hose_constraints[i].attrib && c == n_constraints-2) {
-          matrixcp(m,second.orient);
-          matrixneg(second.orient,m);
-        }
-        vectorrot3(v,hose_constraints[i].offset,second.orient);
-        if (hose_constraints[i].attrib && c == n_constraints-2) {
-          vectorsub(second.offset,v);
-        } else {
-          vectoradd(second.offset,v);
-        }
-        break;
-      }
-    }
+    adjust_constraint(&second, &constraints[c+1],c == n_constraints-2);
 
     n_segments = MAX_SEGMENTS;
 
-    synth_curve(&first,&second,
-                segments,n_segments,hose->stiffness,output);
+    // create an oversampled curve
+
+    synth_curve(&first,&second,segments,n_segments,hose->stiffness,output);
+
+    // Make sure final segment matches second constraint
 
     vectorcp(segments[n_segments-1].offset,second.offset);
+
+    // reduce oversampled curve to fixed length chunks, or segments limit
+    // by angular resolution
 
     if (hose->fill == FIXED) {
       merge_segments_length(segments,&n_segments,hose->mid.attrib,output);
@@ -416,15 +438,22 @@ render_hose(
       vectorcp(mid_constraint.offset,segments[n_segments-2].offset);
     }
 
+    // output the result
+
     render_hose_segment(
       hose,
       ghost,
+      group,
       color,
       segments,n_segments,
       &total_twist,
       c ==0,
       c == n_constraints-2,
       output);
+  }
+
+  if (group) {
+    fprintf(output,"0 GROUP %d %s\n",group_size,group);
   }
 
   fprintf(output,"0 SYNTH SYNTHESIZED END\n");
@@ -437,6 +466,7 @@ synth_hose(
   int     n_constraints,
   part_t *constraints,
   int     ghost,
+  char   *group,
   int     color,
   FILE   *output)
 {
@@ -449,6 +479,7 @@ synth_hose(
         n_constraints,constraints,
         hose_res_angle,
         ghost,
+        group,
         color,
         output);
       return 0;

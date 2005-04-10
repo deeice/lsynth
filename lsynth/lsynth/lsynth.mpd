@@ -1,4 +1,4 @@
-0 FILE LSynth definition file
+0 FILE LSynth definition file.ldr
 0 LSynth definitions
 0 Name: LSynth.mpd
 0 Kevin L. Clague
@@ -18,7 +18,7 @@
 0 // 1 <color> <x> <y> <z> <a> <b> <c> <d> <e> <f> <g> <h> <i> tangent_part
 0 // 1 <color> <x> <y> <z> <a> <b> <c> <d> <e> <f> <g> <h> <i> arc_part
 0 // 0 SYNTH END
-0 // 
+0 //
 0 //   <band_type>   is a name you make up.
 0 //   <fill>        can be STRETCH, FIXED, FIXED3
 0 //                 FIXED means that the synthesized result is made up of
@@ -27,7 +27,7 @@
 0 //
 0 //                 STRETCH means that the synthesized result is made up of
 0 //                 cross sections that are scaled as needed.  For example, on
-0 //                 rubber bands, the band portion that goes from pulley to 
+0 //                 rubber bands, the band portion that goes from pulley to
 0 //                 pulley (the tangent parts), is one single piece of band
 0 //                 cross section that is stretched to go from pulley to
 0 //                 pulley.
@@ -45,7 +45,7 @@
 0 //
 0 //   <x> <y> <z>   these are x,y, and z offsets used to properly displace
 0 //                 the parts in the synthesis process.
-0 //   <a> thru <i>  these are the orientation/scaling values used to 
+0 //   <a> thru <i>  these are the orientation/scaling values used to
 0 //                 properly orient and stretch the parts in the synthesis
 0 //                 process.
 0 //
@@ -67,7 +67,7 @@
 0 //    <x> <y> <z>  reserved for future use.
 0 //    <a> thru <i> reserved for future use.
 0 //    <part>       name of LDraw part used as a constraint.
-0 // 
+0 //
 0 // The format for defining a new type of HOSE is:
 0 //
 0 //  0 SYNTH BEGIN DEFINE <hose_type> HOSE <fill> <diameter> <stiffness> <twist>
@@ -110,7 +110,7 @@
 0 //    <radius>     this describes the radius of the constraint <part>.
 0 //    <x> <y> <z>  these are x,y and z offsets used to properly place
 0 //                 arc parts that wrap around the constraint.  Typlically
-0 //                 only <z> used  
+0 //                 only <z> used
 0 //    <a> thru <i> these are used to orient all constraints' gear planes/
 0 //                 pulley planes into the same orientation.  Technic
 0 //                 turntable's gear plane is not parallel to the technic
@@ -228,10 +228,10 @@
 0 Name: PNEUMATIC_HOSE.ldr
 0 Author: Kevin L. Clague
 0 Unofficial Model
-0 SYNTH BEGIN DEFINE PNEUMATIC_HOSE HOSE STRETCH 12 40 0
+0 SYNTH BEGIN DEFINE PNEUMATIC_HOSE HOSE STRETCH 12 30 0
 0 ROTATION CENTER 0 0 0 1 "Custom" 
 0 ROTATION CONFIG 0 0
-1 0 0 0 0 -1 0 0 0 -1 0 0 0 1 LS20.DAT
+1 14 0 0 0 0.707107 0 -0.707107 0 -1 0 -0.707107 0 -0.707107 LS20.DAT
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS21.DAT
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS20.DAT
 0 WRITE SYNTH END
@@ -289,8 +289,8 @@
 0 ROTATION CONFIG 0 0
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS00.DAT
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS30.DAT
-1 1 0 0 0 1 0 0 0 1 0 0 0 1 LS40.DAT
 1 1 0 0 0 1 0 0 0 1 0 0 0 1 755.DAT
+1 1 0 0 0 1 0 0 0 1 0 0 0 1 LS40.DAT
 0 SYNTH END
 0 
 0
@@ -396,6 +396,15 @@
 1 71 0 0 -20 1 0 0 0 0 1 0 -1 0 48451.DAT
 1 71 0 0 9 1 0 0 0 0 1 0 -1 0 2855.DAT
 0 SYNTH END
+0 
+0 
+0 
+0 
+0 
+0 
+0 
+0 
+0 
 0 
 0
 0

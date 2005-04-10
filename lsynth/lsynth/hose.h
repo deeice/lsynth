@@ -38,6 +38,7 @@ synth_hose(
   int     n_constraints,
   part_t *constraints,
   int     ghost,
+  char   *group,
   int     color,
   FILE   *output);
 #ifdef _cplusplus

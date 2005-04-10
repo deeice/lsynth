@@ -37,56 +37,57 @@
 #include "ctype.h"
 #include "string.h"
 
-//---------------------------------------------------------------------------
+int group_size;
+
 void strupper(char *s) {
   char *p;
   for (p = s; *p; p++) {
     *p = toupper(*p);
   }
 }
-
-//---------------------------------------------------------------------------
-/* If this code works, it was written by Lars C. Hassing. */
-/* If not, I don't know who wrote it.                     */
-
-/* Like fgets, except that 1) any line ending is accepted (\n (unix),
-\r\n (DOS/Windows), \r (Mac (OS9)) and 2) Str is ALWAYS zero terminated
-(even if no line ending was found) */
-//---------------------------------------------------------------------------
-char *L3fgets(char *Str, int n, FILE *fp)
-{
-   register int   c;
-   int            nextc;
-   register char *s = Str;
-
-   while (--n > 0)
-   {
-      if ((c = getc(fp)) == EOF)
-         break;
-      if (c == '\032')
-         continue;              /* Skip CTRL+Z                               */
-      if (c == '\r' || c == '\n')
-      {
-         *s++ = '\n';
-         /* We got CR or LF, eat next character if LF or CR respectively */
-         if ((nextc = getc(fp)) == EOF)
+//--------------------------------------------------------------------------- 
+   /* If this code works, it was written by Lars C. Hassing. */ 
+   /* If not, I don't know who wrote it.                     */ 
+    
+   /* Like fgets, except that 1) any line ending is accepted (\n (unix), 
+   \r\n (DOS/Windows), \r (Mac (OS9)) and 2) Str is ALWAYS zero terminated 
+   (even if no line ending was found) */ 
+   //--------------------------------------------------------------------------- 
+   char *L3fgets(char *Str, int n, FILE *fp) 
+   { 
+      register int   c; 
+      int            nextc; 
+      register char *s = Str; 
+    
+      while (--n > 0) 
+      { 
+         if ((c = getc(fp)) == EOF)
             break;
-         if (nextc == c || (nextc != '\r' && nextc != '\n'))
-            ungetc(nextc, fp);  /* CR-CR or LF-LF or ordinary character      */
-         break;
+         if (c == '\032')
+            continue;              /* Skip CTRL+Z                               */
+         if (c == '\r' || c == '\n')
+         {
+            *s++ = '\n';
+            /* We got CR or LF, eat next character if LF or CR respectively */
+            if ((nextc = getc(fp)) == EOF)
+               break;
+            if (nextc == c || (nextc != '\r' && nextc != '\n'))
+               ungetc(nextc, fp);  /* CR-CR or LF-LF or ordinary character      */
+            break;
+         }
+         *s++ = c;
       }
-      *s++ = c;
+      *s = 0;
+
+      /* if (ferror(fp)) return NULL; if (s == Str) return NULL; */
+      if (s == Str)
+         return NULL;
+
+      return Str;
    }
-   *s = 0;
 
-   /* if (ferror(fp)) return NULL; if (s == Str) return NULL; */
-   if (s == Str)
-      return NULL;
+   //---------------------------------------------------------------------------
 
-   return Str;
-}
-
-//---------------------------------------------------------------------------
 char *
 fgetline(
   char *line,
@@ -117,7 +118,6 @@ fgetline(
   return rc;
 }
 
-//---------------------------------------------------------------------------
 void
 strclean(char *str)
 {
@@ -144,7 +144,7 @@ static int skip_rot(char *line, int n_line, FILE *dat, FILE *temp)
   while (strncmp(nonwhite,"0 ROTATION C",strlen("0 ROTATION C")) == 0 ||
          strncmp(nonwhite,"0 COLOR",strlen("0 COLOR")) == 0) {
     fputs(line,temp);
-    L3fgets(line,n_line,dat);  /* FIXME: check L3fgets rc */
+    L3fgets(line,n_line,dat);  /* FIXME: check fgets rc */
     strcpy(caps,line); strupper(caps); nonwhite = caps + strspn(caps," \t");
   }
 
@@ -170,7 +170,7 @@ parse_descr(char *fullpath_progname)
     char *l, *p;
 
     for (l = p = filename; *p; *p++) {
-      if ((*p == '\\') || (*p == '/')) {
+      if (*p == '\\' || *p == '/') {
         l = p+1;
       }
     }
@@ -408,7 +408,8 @@ static
 int synth_hose_class(
   char *nonwhite,
   FILE *dat,
-  FILE *temp)
+  FILE *temp,
+  char *group)
 {
   char   type[256];
   char   line[512];
@@ -497,7 +498,7 @@ int synth_hose_class(
     strclean(nonwhite);
 
     if (strcmp(nonwhite,"0 SYNTH END\n") == 0) {
-      rc = synth_hose(type,constraint_n,constraints,ghost,hose_color,temp);
+      rc = synth_hose(type,constraint_n,constraints,ghost,group,hose_color,temp);
       fputs(line,temp);
     }
   }
@@ -512,7 +513,8 @@ static
 int synth_band_class(
   char *nonwhite,
   FILE *dat,
-  FILE *temp)
+  FILE *temp,
+  char *group)
 {
   char type[256];
   char line[512];
@@ -617,14 +619,14 @@ int synth_band_class(
     if (strcmp(nonwhite,"0 SYNTH END\n") == 0 ||
         strcmp(nonwhite,"0 WRITE SYNTH END\n") == 0) {
 
-      rc = synth_band(type,constraint_n,constraints,color,temp,ghost);
+      rc = synth_band(type,constraint_n,constraints,color,temp,ghost,group);
       fputs(line,temp);
     }
   }
   return 0;
 }
 
-PRECISION hose_res_angle = 0.01;
+PRECISION hose_res_angle = 0.05;
 PRECISION band_res = 2;
 
 //---------------------------------------------------------------------------
@@ -788,6 +790,7 @@ int main(int argc, char* argv[])
 
     if (strncmp(nonwhite,"0 SYNTH BEGIN ", strlen("0 SYNTH BEGIN ")) == 0) {
       char *option;
+      char *group;
 
       nonwhite += strlen("0 SYNTH BEGIN ");
 
@@ -830,14 +833,24 @@ int main(int argc, char* argv[])
       if (option) {
         option += strlen("UNITS=");
       }
+      group = strstr(line, "GROUP=");
+      if (group) {
+        char *s;
+        group += strlen("GROUP=");
+        s = group;
+        while (*s && *s != ' ' && *s != '\n') {
+          s++;
+        }
+        *s = '\0';
+      }
 
       /* check to see if it is a known synth command */
 
       if (ishosetype(nonwhite)) {
-        synth_hose_class(nonwhite,dat,synthfile);
+        synth_hose_class(nonwhite,dat,synthfile,group);
 
       } else if (isbandtype(nonwhite)) {
-        synth_band_class(nonwhite,dat,synthfile);
+        synth_band_class(nonwhite,dat,synthfile,group);
 
       } else {
         printf("Unknown synthesis type %s\n",nonwhite);

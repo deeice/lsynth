@@ -62,7 +62,8 @@ synth_band(
   LSL_band_constraint *constraints,
   int                  color,
   FILE                *output,
-  int                  ghost);
+  int                  ghost,
+  char                *group);
 
 #ifdef _cplusplus
 };

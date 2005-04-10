@@ -402,6 +402,7 @@ int draw_arc_line(
   int                  draw_line,
   FILE                *output,
   int                  ghost,
+  char                *group,
   part_t      *absolute,
   LSL_band_constraint *f_constraint)
 {
@@ -429,11 +430,11 @@ int draw_arc_line(
         orient[1][0] = 0;
         orient[2][0] = 0;
         orient[0][1] = 0;
-        orient[1][1] = 1;
-        orient[2][1] = 0;
+        orient[1][1] = 0;
+        orient[2][1] =-1;
         orient[0][2] = 0;
-        orient[1][2] = 0;
-        orient[2][2] = 1;
+        orient[1][2] = 1;
+        orient[2][2] = 0;
       } else {
         orient[0][0] =  dy/L1;  //  cos
         orient[1][0] = -dx/L1;  //  sin
@@ -543,6 +544,7 @@ int draw_arc_line(
         output_line(
           output,
           ghost,
+          group,
           color,
           part.offset[0],part.offset[1],part.offset[2],
           part.orient[0][0],
@@ -621,11 +623,11 @@ int draw_arc_line(
         orient[1][0] =  0;
         orient[2][0] =  0;
         orient[0][1] =  0;
-        orient[1][1] =  1;
-        orient[2][1] =  0;
+        orient[1][1] =  0;
+        orient[2][1] = -1;
         orient[0][2] =  0;
-        orient[1][2] =  0;
-        orient[2][2] =  1;
+        orient[1][2] =  1;
+        orient[2][2] =  0;
       } else {
         orient[0][0] =  dy/L1;
         orient[1][0] = -dx/L1;
@@ -715,6 +717,7 @@ int draw_arc_line(
       output_line(
         output,
         ghost,
+        group,
         color,
         part.offset[0],part.offset[1],part.offset[2],
         part.orient[0][0],
@@ -808,7 +811,8 @@ synth_band(
   LSL_band_constraint *constraints,
   int color,
   FILE *output,
-  int ghost)
+  int ghost,
+  char *group)
 {
   int i;
   int cross = 0;
@@ -1012,6 +1016,8 @@ synth_band(
 
   fprintf(output,"0 SYNTH SYNTHESIZED BEGIN\n");
 
+  group_size = 0;
+
   /* now draw out the rubber band in terms of lines and arcs */
   for (i = 0; i <= n_constraints; ) {
     if (constraints[i].radius != 0) {
@@ -1026,6 +1032,7 @@ synth_band(
             n_constraints > 1,
             output,
             ghost,
+            group,
             &absolute,
             &constraints[first]);
           i = j;
@@ -1039,7 +1046,9 @@ synth_band(
       i++;
     }
   }
-
+  if (group) {
+    fprintf(output,"0 GROUP %d %s\n",group_size,group);
+  }
   fprintf(output,"0 SYNTH SYNTHESIZED END\n");
   printf("Synthesized %s\n",type);
   return 0;
