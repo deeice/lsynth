@@ -302,7 +302,7 @@ render_hose_segment(
 
       if (n_segments > 2) {
         theta = line_angle(i+1,i,segments);
-        theta = sin(theta)*(hose->diameter/2);
+        theta = sin(theta)*(hose->diameter);
 
         l += theta;
       }

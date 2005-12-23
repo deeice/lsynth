@@ -39,6 +39,7 @@ typedef struct {
                          // STRETCH - for rubber bands
   PRECISION scale;       // convert LDUs to number of parts
   PRECISION thresh;      // used to compute number of steps on arc
+  int       pulley;      // initially for STRING on pulleys
   part_t    tangent;     // the part type used for tangent
   part_t    arc;         // the part type used for going around constraints
   part_t    start_trans; // for rubber treads, transition from arc to tangent

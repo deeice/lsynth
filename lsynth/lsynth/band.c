@@ -6,7 +6,7 @@
 #include "lsynthcp.h"
 #include "band.h"
 #include "hose.h"
-#include <math.h>
+#include "math.h"
 #include <float.h>
 
 /*
@@ -311,8 +311,6 @@ int calc_tangent_line(
   }
 
   rlk = rl - rk;
-
-  /* rotate xk and yk up to -45 degrees */
 
   xlk = l->part.offset[0] - k->part.offset[0];
   ylk = l->part.offset[1] - k->part.offset[1];
@@ -744,13 +742,14 @@ showconstraints(
   int                  n_constraints,
   int                  color)
 {
-#if 0
+#if 1
   int i;
 
   for (i = 0; i < n_constraints; i++) {
     output_line(
       output,
       0,
+      NULL,
       color,
       constraints[i].part.offset[0],
       constraints[i].part.offset[1],
@@ -778,7 +777,7 @@ rotate_constraints(
   int i;
   PRECISION t[3][3];
 
-  for (i = 0; i < n_constraints; i++) {
+  for (i = 0; i < n_constraints-1; i++) {
     vectorrot(constraints[i].part.offset,m);
     matrixcp(t,constraints[i].part.orient);
     matrixmult3(constraints[i].part.orient,m,t);
@@ -874,8 +873,10 @@ synth_band(
 
   /* create an extra constraint that represents the final state of the
    * first pulley */
-
-  memcpy(&constraints[i],&constraints[first],sizeof(constraints[i]));
+  if (band_type->pulley == 0) {
+    memcpy(&constraints[i],&constraints[first],sizeof(constraints[i]));
+    n_constraints++;
+  }
   constraints[i].inside    = inside;
   constraints[i].cross     = cross;
   constraints[i].was_cross = was_cross;
@@ -886,7 +887,7 @@ synth_band(
 
   /* 1. move the first constraint to the origin */
 
-  for (i = 0; i <= n_constraints; i++) {
+  for (i = 0; i < n_constraints; i++) {
     if (constraints[i].radius) {
       vectorsub(constraints[i].part.offset,absolute.offset);
     }
@@ -898,7 +899,7 @@ synth_band(
 
   matrixinv(inv,absolute.orient);
 
-  rotate_constraints(constraints,n_constraints+1,inv);
+  rotate_constraints(constraints,n_constraints,inv);
 
   showconstraints(output,constraints,n_constraints,4);
 
@@ -907,7 +908,7 @@ synth_band(
    *    simple gears, like technic turntable).
    */
 
-  rotate_constraints(constraints,n_constraints+1,
+  rotate_constraints(constraints,n_constraints,
     band_constraints[constraints[first].band_constraint_n].orient);
 
   showconstraints(output,constraints,n_constraints,15);
@@ -916,7 +917,7 @@ synth_band(
    *    origin.
    */
 
-  for (i = 0; i <= n_constraints; i++) {
+  for (i = 0; i < n_constraints; i++) {
     if (constraints[i].radius) {
       vectorsub(constraints[i].part.offset,
         band_constraints[constraints[i].band_constraint_n].offset);
@@ -930,13 +931,13 @@ synth_band(
   first = -1;
   last  = -1;
 
-  for (i = 0; i < n_constraints; ) {
+  for (i = 0; i < n_constraints - 1; ) {
     if (constraints[i].radius) {
       int j;
       if (first == -1) {
         first = i;
       }
-      for (j = i+1; j <= n_constraints; j++) {
+      for (j = i+1; j < n_constraints; j++) {
         if (constraints[j].radius) {
           calc_tangent_line(&constraints[i],&constraints[j],output);
           i = j;
@@ -963,10 +964,10 @@ synth_band(
       constraints[i].n_crossings = 1;
     }
   }
-  for (i = 0; i < n_constraints; i++) {
+  for (i = 0; i < n_constraints- 1; i++) {
     if (constraints[i].radius) {
       int j;
-      for (j = i+1; j <= n_constraints; j++) {
+      for (j = i+1; j < n_constraints; j++) {
         if (constraints[j].radius) {
           calc_crosses(&constraints[i],&constraints[j],&layer,output);
         }
@@ -983,7 +984,7 @@ synth_band(
       PRECISION layer_offset;
       layer_offset = (((layer) / 2) % 2) * BAND_DIAM/2;
       //layer_offset = 0;
-      for (i = 0; i < n_constraints; i++) {
+      for (i = 0; i < n_constraints-1; i++) {
         if (constraints[i].radius) {
           int j;
           for (j = 1; j < constraints[i].n_crossings; j++) {
@@ -995,14 +996,14 @@ synth_band(
     }
   }
 
-  for (i = 0; i < n_constraints; i++) {
+  for (i = 0; i < n_constraints-1; i++) {
     if (constraints[i].radius) {
       vectorcp(constraints[i].crossings[constraints[i].n_crossings++],
                constraints[i].end_line);
     }
   }
 
-  for (i = 0; i < n_constraints; i++) {
+  for (i = 0; i < n_constraints-1; i++) {
     if (constraints[i].radius) {
       calc_angles(band_type,&constraints[i],output);
     }
@@ -1019,10 +1020,10 @@ synth_band(
   group_size = 0;
 
   /* now draw out the rubber band in terms of lines and arcs */
-  for (i = 0; i <= n_constraints; ) {
+  for (i = 0; i < n_constraints; ) {
     if (constraints[i].radius != 0) {
       int j;
-      for (j = i+1; j <= n_constraints; j++) {
+      for (j = i+1; j < n_constraints; j++) {
 
         if (constraints[j].radius) {
           draw_arc_line(
@@ -1052,4 +1053,6 @@ synth_band(
   fprintf(output,"0 SYNTH SYNTHESIZED END\n");
   printf("Synthesized %s\n",type);
   return 0;
+
 }
+

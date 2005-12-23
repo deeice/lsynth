@@ -348,6 +348,149 @@ parse_descr(char *fullpath_progname)
         return -1;
       }
       n_band_types++;
+    } else if (sscanf(line,"0 SYNTH BEGIN DEFINE %s BAND %s %f %f\n",
+                 type,stretch,&s,&t) == 4) {
+      int n;
+
+      if (strcmp(stretch,"STRETCH") == 0) {
+        band_types[n_band_types].fill = STRETCH;
+        n = 2;
+      } else if (strcmp(stretch,"FIXED") == 0) {
+        band_types[n_band_types].fill = FIXED;
+        n = 2;
+      } else if (strcmp(stretch,"FIXED3") == 0) {
+        band_types[n_band_types].fill = FIXED3;
+        n = 4;
+      } else {
+        printf("Error: Unrecognized fill type %s for hose type %s.  Aborting\n",
+          stretch,type);
+        fclose(mpd);
+        return -1;
+      }
+
+      strcpy(band_types[n_band_types].type,type);
+      band_types[n_band_types].scale = s;
+      band_types[n_band_types].thresh = t;
+      band_types[n_band_types].pulley = 0;
+
+      for (i = 0; i < n; i++) {
+        part_t *part;
+
+        if (i == 0) {
+          part = &band_types[n_band_types].tangent;
+        } else if (i == 1) {
+          part = &band_types[n_band_types].arc;
+        } else if (i == 2) {
+          part = &band_types[n_band_types].start_trans;
+        } else {
+          part = &band_types[n_band_types].end_trans;
+        }
+
+        if (fgetline(line,sizeof(line),mpd)) {
+          if (sscanf(line,"1 %d %f %f %f %f %f %f %f %f %f %f %f %f %s\n",
+            &part->attrib,
+            &part->offset[0],    &part->offset[1],    &part->offset[2],
+            &part->orient[0][0], &part->orient[0][1], &part->orient[0][2],
+            &part->orient[1][0], &part->orient[1][1], &part->orient[1][2],
+            &part->orient[2][0], &part->orient[2][1], &part->orient[2][2],
+             part->type) != 14) {
+            printf("Error: Failed to parse type one line.  Got this instead:\n");
+            printf(line);
+            fclose(mpd);
+            return -1;
+          }
+        } else {
+          printf("Error: Unexpected end of file\n");
+          fclose(mpd);
+          return -1;
+        }
+      }
+
+      if (L3fgets(line,sizeof(line),mpd)) {
+        if (strcmp(line,"0 SYNTH END\n") != 0) {
+          printf("Error: Expected SYNTH END, got this instead\n");
+          printf(line);
+          fclose(mpd);
+          return -1;
+        }
+      } else {
+        printf("Error: Unexepcted end of file\n");
+        fclose(mpd);
+        return -1;
+      }
+      n_band_types++;
+    } else if (sscanf(line,"0 SYNTH BEGIN DEFINE %s PULLEY %s %f %f\n",
+                 type,stretch,&s,&t) == 4) {
+      int n;
+
+      if (strcmp(stretch,"STRETCH") == 0) {
+        band_types[n_band_types].fill = STRETCH;
+        n = 2;
+      } else if (strcmp(stretch,"FIXED") == 0) {
+        band_types[n_band_types].fill = FIXED;
+        n = 2;
+      } else if (strcmp(stretch,"FIXED3") == 0) {
+        band_types[n_band_types].fill = FIXED3;
+        n = 4;
+      } else {
+        printf("Error: Unrecognized fill type %s for hose type %s.  Aborting\n",
+          stretch,type);
+        fclose(mpd);
+        return -1;
+      }
+
+      strcpy(band_types[n_band_types].type,type);
+      band_types[n_band_types].scale = s;
+      band_types[n_band_types].thresh = t;
+
+      band_types[n_band_types].pulley = 1;
+
+      for (i = 0; i < n; i++) {
+        part_t *part;
+
+        if (i == 0) {
+          part = &band_types[n_band_types].tangent;
+        } else if (i == 1) {
+          part = &band_types[n_band_types].arc;
+        } else if (i == 2) {
+          part = &band_types[n_band_types].start_trans;
+        } else {
+          part = &band_types[n_band_types].end_trans;
+        }
+
+        if (fgetline(line,sizeof(line),mpd)) {
+          if (sscanf(line,"1 %d %f %f %f %f %f %f %f %f %f %f %f %f %s\n",
+            &part->attrib,
+            &part->offset[0],    &part->offset[1],    &part->offset[2],
+            &part->orient[0][0], &part->orient[0][1], &part->orient[0][2],
+            &part->orient[1][0], &part->orient[1][1], &part->orient[1][2],
+            &part->orient[2][0], &part->orient[2][1], &part->orient[2][2],
+             part->type) != 14) {
+            printf("Error: Failed to parse type one line.  Got this instead:\n");
+            printf(line);
+            fclose(mpd);
+            return -1;
+          }
+        } else {
+          printf("Error: Unexpected end of file\n");
+          fclose(mpd);
+          return -1;
+        }
+      }
+
+      if (L3fgets(line,sizeof(line),mpd)) {
+        if (strcmp(line,"0 SYNTH END\n") != 0) {
+          printf("Error: Expected SYNTH END, got this instead\n");
+          printf(line);
+          fclose(mpd);
+          return -1;
+        }
+      } else {
+        printf("Error: Unexepcted end of file\n");
+        fclose(mpd);
+        return -1;
+      }
+      n_band_types++;
 
     } else if (strcmp(line,"0 SYNTH BEGIN DEFINE BAND CONSTRAINTS\n") == 0) {
       while(fgetline(line,sizeof(line),mpd)) {
