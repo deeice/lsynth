@@ -5,11 +5,13 @@
 #ifndef LSYNTH_H
 #define LSYNTH_H
 
-#include "stdlib.h"
-#include "stdio.h"
-#include "math.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
 #include <string.h>
+
 #include "mathlib.h"
+#include "strings.h"
 
 #define ACCY (1e-6)
 

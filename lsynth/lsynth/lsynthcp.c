@@ -31,12 +31,11 @@
 
 #pragma hdrstop
 
+#include <ctype.h>
+
 #include "lsynthcp.h"
 #include "hose.h"
 #include "band.h"
-#include "ctype.h"
-#include "string.h"
-#include "strings.h"
 
 typedef struct {
   char name[126];
@@ -203,6 +202,9 @@ parse_descr(char *fullpath_progname)
         hose_types[n_hose_types].fill = STRETCH;
       } else if (strcasecmp(stretch,"FIXED") == 0) {
         hose_types[n_hose_types].fill = FIXED;
+      } else if ((strncasecmp(stretch,"FIXED",strlen("FIXED")) == 0) &&
+                 (sscanf(stretch, "FIXED%d", &i) == 1) && (i >1)) {
+        hose_types[n_hose_types].fill = i;
       } else {
         printf("Error: Unrecognized fill type %s for hose type %s.  Aborting\n",
           stretch,type);

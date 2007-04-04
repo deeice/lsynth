@@ -3,12 +3,12 @@
  * By Kevin Clague and Don Heyse
  */
 
+#include <math.h>
+#include <float.h>
+
 #include "lsynthcp.h"
 #include "band.h"
 #include "hose.h"
-#include "math.h"
-#include <float.h>
-#include "strings.h"
 
 /*
  * 0 SYNTH BEGIN DEFINE BAND <fill> RUBBER_BAND "Descr" <scale> <thresh>

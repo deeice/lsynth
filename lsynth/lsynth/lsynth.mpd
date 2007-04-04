@@ -27,7 +27,6 @@
 0 SYNTH PART  680C01.DAT TECHNIC_TREAD    RUBBER_TREAD
 0 SYNTH PART  208C01.DAT MINIFIG_CHAIN_17 MINIFIG_CHAIN
 0 //
-0 //
 0 // This file specifies hose and band synthesis definitions, as well as
 0 // the constraints for both hose and bands.  This file is basically an
 0 // MPD file that contains four types of files:
@@ -59,6 +58,11 @@
 0 //  0 SYNTH END
 0 //    <hose_type>  is a name you make up.
 0 //    <fill>       can be one of two keywords: FIXED or STRETCH
+0 //                 STRETCH means that the synthesized result is made up of
+0 //                 cross sections that are scaled as needed.
+0 //                 FIXED means that the synthesized result is made up of
+0 //                 fixed size elements.  This may be conbined with a number
+0 //                 to specify a total count of segments to use.  eg. FIXED21
 0 //    <diameter>   this describes the diameter of the hose, and is used
 0 //                 by STRETCH type hoses.  It is used only to determine how
 0 //                 long to extend stretched hose cross sections so that hose
@@ -146,6 +150,8 @@
 0 //                 <x> <y> <z> to the turntable part makes the gear plane
 0 //                 coincident with the technic gear plane.
 0 //    <part>       this is the name of the ldraw part used as a constraint.
+0 //
+0 // 2007-03-28  DMH      Minifig Chain updates.
 0 //
 0 // Below are the actual descriptions of hoses, bands and constraints.
 0 
@@ -237,14 +243,14 @@
 0 FILE MINIFIG_CHAIN.ldr
 0 MINIFIG_CHAIN SYNTHESIS DEFINITION
 0 Name: MINIFIG_CHAIN.ldr
-0 Author: Kevin L. Clague
+0 Author: Kevin L. Clague and DH
 0 Unofficial Model
-0 SYNTH BEGIN DEFINE MINIFIG_CHAIN HOSE FIXED 2 0 90
+0 SYNTH BEGIN DEFINE MINIFIG_CHAIN HOSE FIXED21 2 40 90
 0 ROTATION CENTER 0 0 0 1 "Custom" 
 0 ROTATION CONFIG 0 0
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 209.DAT
-1 12 0 0 0 1 0 0 0 1 0 0 0 1 209.DAT
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 209.DAT
+1 0 0 10 0 1 0 0 0 1 0 0 0 1 209.DAT
+1 12 0 10 0 1 0 0 0 1 0 0 0 1 209.DAT
+1 0 0 10 0 1 0 0 0 1 0 0 0 1 209.DAT
 0 SYNTH END
 0 
 0

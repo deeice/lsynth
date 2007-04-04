@@ -30,6 +30,13 @@ orient(
   int       n_segments,
   part_t   *segments);
 
+void
+orientq(
+  part_t   *start,
+  part_t   *end,
+  int       n_segments,
+  part_t   *segments);
+
 #ifdef _cplusplus
 };
 #endif

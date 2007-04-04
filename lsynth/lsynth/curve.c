@@ -348,3 +348,339 @@ synth_curve(
   return 0; /* it all worked */
 }
 
+
+
+
+
+/***************************************************************/
+// Quaternion q[4] is mostly a direction vector with a spin(roll) angle.
+// ie. quaternion(x,y,z,spin)
+// 
+// Gotta compare quat FAQ conversions to ldglite conversions to
+// see what to do with the weird ldraw coordinate system.  I think I 
+// may have to reverse -y (and maybe z) to get right? handed system
+// before using quaternions.  Make sure I copied all conversions from
+// same place to avoid mixed systems.
+
+/***************************************************************/
+
+/***************************************************************/
+void normalizequat(PRECISION q[4])
+{
+  PRECISION L;
+
+  L = sqrt(q[0]*q[0] + q[1]*q[1] + q[2]*q[2] + q[3]*q[3]);
+
+  q[0] /= L;
+  q[1] /= L;
+  q[2] /= L;
+  q[3] /= L;
+}
+
+/***************************************************************/
+void normalize(PRECISION v[3])
+{
+  PRECISION L;
+
+  L = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+
+  v[0] /= L;
+  v[1] /= L;
+  v[2] /= L;
+}
+
+/***************************************************************/
+/* returns det(m), m is 3x3 (3x4) matrix */
+/***************************************************************/
+PRECISION M3Det(PRECISION m[3][4]) /* Note argument type !            */
+{
+   return (m[0][0] * (m[1][1] * m[2][2] - m[2][1] * m[1][2]) +
+           m[1][0] * (m[2][1] * m[0][2] - m[0][1] * m[2][2]) +
+           m[2][0] * (m[0][1] * m[1][2] - m[1][1] * m[0][2]));
+}
+/***************************************************************/
+// Convert axis v[3] and angle a to quaternion q[4].
+/***************************************************************/
+void axisangle2quat(
+  PRECISION v[3], 
+  PRECISION a,
+  PRECISION q[4])
+{
+  PRECISION sina,cosa;
+  
+  a = a / 2.0;
+  sina = sin(a);
+  cosa = cos(a);
+  q[0] = v[0] * sina;
+  q[1] = v[1] * sina;
+  q[2] = v[2] * sina;
+  q[3] = cosa;
+}
+
+/***************************************************************/
+// Convert rotation matrix m[3][3] to quaternion q[4].
+// Beware!  Quaternions cannot handle mirror matrices.
+// This may be a problem because the ldraw coordinate system is mirrored?
+/***************************************************************/
+void matrix2quat(
+  PRECISION m[3][3],
+  PRECISION q[4])
+{
+  PRECISION T;
+  PRECISION S;
+
+  // NOTE:  First unmirror any mirrored matrix.
+  // (Multiplying the rotation matrix with the sign of its determinant).
+  PRECISION D = M3Det(m);
+  if (D < 0.0)
+  {
+    // TODO: Unmirror
+  }
+
+#ifdef SPEEDY_WAY
+#define max(a,b) ((a > b) ? (a) : (b))
+
+  q[0] = sqrt( max( 0, 1 + m[0][0] - m[1][1] - m[2][2] ) ) / 2; 
+  q[1] = sqrt( max( 0, 1 - m[0][0] + m[1][1] - m[2][2] ) ) / 2; 
+  q[2] = sqrt( max( 0, 1 - m[0][0] - m[1][1] + m[2][2] ) ) / 2; 
+  q[3] = sqrt( max( 0, 1 + m[0][0] + m[1][1] + m[2][2] ) ) / 2; 
+  q[0] = _copysign( q[0], m[2][1] - m[1][2] );
+  q[1] = _copysign( q[1], m[0][2] - m[2][0] );
+  q[2] = _copysign( q[2], m[1][0] - m[0][1] );
+  return;
+#endif
+
+  // Calculate the trace of the matrix T from the equation:
+  T = 1 + m[0][0] + m[1][1] + m[2][2];
+  if ( T > 0.00000001 )
+  {
+    S = sqrt(T) * 2;
+    q[0] = ( m[2][1] - m[1][2] ) / S;
+    q[1] = ( m[0][2] - m[2][0] ) / S;
+    q[2] = ( m[1][0] - m[0][1] ) / S;
+    q[3] = 0.25 * S;
+  }
+  // If the trace of the matrix is equal to zero then identify
+  // which major diagonal element has the greatest value.
+  // Depending on this, calculate the following:
+  else if ( (m[0][0] > m[1][1]) && (m[0][0] > m[2][2]) )  {	// Column 0: 
+    S  = sqrt( 1.0 + m[0][0] - m[1][1] - m[2][2] ) * 2;
+    q[0] = 0.25 * S;
+    q[1] = ( m[1][0] + m[0][1] ) / S;
+    q[2] = ( m[0][2] + m[2][0] ) / S;
+    q[3] = ( m[1][2] - m[2][1] ) / S; //    q[3] = ( m[2][1] - m[1][2] ) / S;
+  } else if ( m[1][1] > m[2][2] ) {			// Column 1: 
+    S  = sqrt( 1.0 + m[1][1] - m[0][0] - m[2][2] ) * 2;
+    q[0] = ( m[1][0] + m[0][1] ) / S;
+    q[1] = 0.25 * S;
+    q[2] = ( m[2][1] + m[1][2] ) / S;
+    q[3] = ( m[0][2] - m[2][0] ) / S;
+  } else {						// Column 2:
+    S  = sqrt( 1.0 + m[2][2] - m[0][0] - m[1][1] ) * 2;
+    q[0] = ( m[0][2] + m[2][0] ) / S;
+    q[1] = ( m[2][1] + m[1][2] ) / S;
+    q[2] = 0.25 * S;
+    q[3] = ( m[0][1] - m[1][0] ) / S; //    q[3] = ( m[1][0] - m[0][1] ) / S;
+  }
+}
+
+/***************************************************************/
+// Convert quaternion q[4] to rotation matrix m[3][3].
+/***************************************************************/
+void quat2matrix(
+  PRECISION q[4],
+  PRECISION m[3][3])
+{
+  PRECISION a,b,c,s;
+
+  normalizequat( q );
+
+  a = q[0];
+  b = q[1];
+  c = q[2];
+  s = q[3];
+
+  m[0][0]  = 1 - 2*b*b-2*c*c;
+  m[0][1]  = 2*a*b - 2*s*c;
+  m[0][2]  = 2*a*c + 2*s*b;
+  m[1][0]  = 2*a*b+2*s*c;
+  m[1][1]  = 1 - 2*a*a - 2*c*c;
+  m[1][2]  = 2*b*c - 2*s*a;
+  m[2][0]  = 2*a*c - 2*s*b;
+  m[2][1]  = 2*b*c + 2*s*a;
+  m[2][2] = 1 - 2*a*a - 2*b*b;
+}
+
+/***************************************************************/
+// Convert quaternion q[4] to a rotation axis v[3] and angle a.
+/***************************************************************/
+ 
+PRECISION quat2axisangle(
+  PRECISION q[4],
+  PRECISION v[3],
+  PRECISION *a)
+{
+  PRECISION cos_angle, sin_angle;
+
+  normalizequat( q );
+
+  cos_angle  = q[3];
+  *a          = acos( cos_angle ) * 2;
+  sin_angle  = sqrt( 1.0 - cos_angle * cos_angle );
+
+  if ( fabs( sin_angle ) < 0.0005 )
+    sin_angle = 1;
+
+  v[0] = q[0] / sin_angle;
+  v[1] = q[1] / sin_angle;
+  v[2] = q[2] / sin_angle;
+
+  return *a;
+}
+
+/***************************************************************/
+// Convert start, end constraints and n points to oriented segments
+// using quaternion.
+/***************************************************************/
+void
+orientq(
+  part_t       *start,
+  part_t       *end,
+  int           n_segments,
+  part_t       *segments)
+{
+  PRECISION start_up,end_up,up; // Up is now a twist angle, not a vector.
+  PRECISION start_q[4],end_q[4],q[4];
+  PRECISION v[3];
+  PRECISION total_length = hose_length(n_segments,segments);
+  PRECISION cur_length;
+  int i;
+
+  // Get the start and end twist angles (up vectors)
+
+  // NOTE:  matrix2quat() is broken.  Should I normalize m[3][3] first?
+  //
+  // Maybe I should get the up and forward vectors the orient() way, 
+  // then convert up to an angle.  (How?  dot product?)
+
+  matrix2quat(start->orient, start_q);
+  matrix2quat(end->orient, end_q);
+
+#define DEBUG_QUAT_MATH 1
+#ifdef DEBUG_QUAT_MATH
+ {
+  PRECISION pi = 2*atan2(1,0);
+  PRECISION degrees = 180.0 / pi;
+
+  // Sanity check.  Convert v[0,0,-1] and pi to quat.
+  PRECISION orient[3][3];
+  v[0] = 0;
+  v[1] = 0;
+  v[2] = -1;
+  up = pi;
+  axisangle2quat(v, up, q);
+  printf("V[T] = (%.2fx, %.2fy, %.2fz, %.2f up) => Q(%.2f, %.2f, %.2f, %.2f)\n",
+	   v[0],v[1],v[2], up*degrees, q[0],q[1],q[2],q[3]);
+  quat2matrix(q, orient);
+  printf("M[T] = (%.2f, %.2f, %.2f,   %.2f, %.2f, %.2f,   %.2f, %.2f, %.2f)\n\n",
+	 orient[0][0],
+	 orient[0][1],
+	 orient[0][2],
+	 orient[1][0],
+	 orient[1][1],
+	 orient[1][2],
+	 orient[2][0],
+	 orient[2][1],
+	 orient[2][2]);
+
+  up = M3Det(start->orient);
+  printf("Det[S] = %.2f\n\n)", up);
+
+  quat2axisangle(start_q, v, &start_up);
+  printf("M[S] = (%.2f, %.2f, %.2f,   %.2f, %.2f, %.2f,   %.2f, %.2f, %.2f)\n",
+	 start->orient[0][0],
+	 start->orient[0][1],
+	 start->orient[0][2],
+	 start->orient[1][0],
+	 start->orient[1][1],
+	 start->orient[1][2],
+	 start->orient[2][0],
+	 start->orient[2][1],
+	 start->orient[2][2]);
+  printf("V[S] = (%.2fx, %.2fy, %.2fz, %.2f up) => Q(%.2f, %.2f, %.2f, %.2f)\n",
+	   v[0],v[1],v[2], start_up*degrees, start_q[0],start_q[1],start_q[2],start_q[3]);
+  quat2axisangle(end_q, v, &end_up);
+ }
+#else
+  start_up = acos(start_q[3]) * 2.0;
+  end_up = acos(end_q[3]) * 2.0;
+#endif
+
+  /* Up angle controls the twist
+   *
+   * Interpolate the up angle based on start up angle, end up angle, 
+   * and how far we are down the hose's total length.
+   */
+
+  for (i = 1; i < n_segments; i++) {
+    PRECISION v0[3];
+
+    cur_length = hose_length(i,segments);
+    cur_length /= total_length;
+    up = start_up*(1-cur_length) + end_up*cur_length;
+
+    // Get the axis before segment i.
+    v0[0] = segments[i].offset[0] - segments[i-1].offset[0];
+    v0[1] = segments[i].offset[1] - segments[i-1].offset[1];
+    v0[2] = segments[i].offset[2] - segments[i-1].offset[2];
+    normalize(v0);
+
+    // Get the axis after segment i.
+    v[0] = segments[i+1].offset[0] - segments[i].offset[0];
+    v[1] = segments[i+1].offset[1] - segments[i].offset[1];
+    v[2] = segments[i+1].offset[2] - segments[i].offset[2];
+    normalize(v);
+
+    // Tangent at segment i is the average of the before and after axis.
+    v[0] += v0[0];
+    v[1] += v0[1]; 
+    v[2] += v0[2];
+    normalize(v);
+    
+    // Convert to a quaternion, and convert that to a rotation matrix.
+    axisangle2quat(v, up, q);
+    normalizequat( q );
+    quat2matrix(q, segments[i].orient);
+
+#ifdef DEBUG_QUAT_MATH
+    {
+      PRECISION pi = 2*atan2(1,0);
+      PRECISION degrees = 180.0 / pi;
+      
+      printf("  V[%d] = (%.2fx, %.2fy, %.2fz, %.2f up) => Q(%.2f, %.2f, %.2f, %.2f)\n",
+	     i,v[0],v[1],v[2], up*degrees, q[0],q[1],q[2],q[3]);
+    }
+#endif
+  }
+#ifdef DEBUG_QUAT_MATH
+  {
+    PRECISION pi = 2*atan2(1,0);
+    PRECISION degrees = 180.0 / pi;
+      
+    quat2axisangle(end_q, v, &end_up);
+    printf("V[E] = (%.2fx, %.2fy, %.2fz, %.2f up) => Q(%.2f, %.2f, %.2f, %.2f)\n",
+	   v[0],v[1],v[2], end_up*degrees, end_q[0],end_q[1],end_q[2],end_q[3]);
+    printf("M[E] = (%.2f, %.2f, %.2f,   %.2f, %.2f, %.2f,   %.2f, %.2f, %.2f)\n",
+	 end->orient[0][0],
+	 end->orient[0][1],
+	 end->orient[0][2],
+	 end->orient[1][0],
+	 end->orient[1][1],
+	 end->orient[1][2],
+	 end->orient[2][0],
+	 end->orient[2][1],
+	 end->orient[2][2]);
+  }
+#endif
+}
+

@@ -267,7 +267,7 @@ matrixinv(
   PRECISION src[3][3])
 {
   int i,j,k;
-  PRECISION p[3];
+  int p[3];
   PRECISION h,q,s,sup,pivot;
 
   matrixcp(a,src);
