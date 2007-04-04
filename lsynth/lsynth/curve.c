@@ -30,6 +30,17 @@ void orient(
       PRECISION L1,L2;
 
       // determine the orientation of the part in the XY plane
+      // 
+      // WARNING!  This is bad for twist if the hose mostly bends in XZ or YZ plane.
+      // Start with the orient of the 1st constraint (the fin), and adjust from there?
+      // 
+      // Quaternion roll interpolation?  Make a new orientQ() function to convert
+      // constraint orientations to quaternions & slerp the intermediate points?
+      // 
+      // Sounds like Kevin already did it:  http://news.lugnet.com/cad/dev/?n=10517
+      // (dx,dy,dz) + an interpolated up vector easily converts to a quaternion.
+      // Then just convert the quaternion to an orient matrix and its done. 
+      // The only thing easier would be to use spin angles instead of up vectors.
 
       dx = segments[i+1].offset[0] - segments[i].offset[0];
       dy = segments[i+1].offset[1] - segments[i].offset[1];
@@ -61,6 +72,7 @@ void orient(
       }
   }
 }
+
 
 int
 synth_curve(

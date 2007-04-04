@@ -197,6 +197,9 @@ parse_descr(char *fullpath_progname)
         hose_types[n_hose_types].fill = STRETCH;
       } else if (strcmp(stretch,"FIXED") == 0) {
         hose_types[n_hose_types].fill = FIXED;
+      } else if ((strncmp(stretch,"FIXED",strlen("FIXED")) == 0) &&
+                 (sscanf(stretch, "FIXED%d", &i) == 1) && (i >1)) {
+        hose_types[n_hose_types].fill = i;
       } else {
         printf("Error: Unrecognized fill type %s for hose type %s.  Aborting\n",
           stretch,type);
@@ -865,8 +868,8 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  printf("LSynth version 2.2 by Kevin Clague, kevin_clague@yahoo.com\n");
-  printf("                   and Don Heyse\n");
+  printf("LSynth version 2.3 by Kevin Clague, kevin_clague@yahoo.com\n");
+  printf("  (Modified with UNOFFICIAL minifig chain patch by DH)\n");
 
   if (argc == 2 && strcmp(argv[1],"-v") == 0) {
     return 1;

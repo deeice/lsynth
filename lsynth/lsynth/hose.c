@@ -204,9 +204,57 @@ merge_segments_length(
   return 0;
 }
 
+int
+merge_segments_count(
+  part_t    *segments,
+  int       *n_segments,
+  int       count,
+  FILE      *output)
+{
+  int n, i;
+  PRECISION d[3],l;
+  PRECISION len;
+
+  // Get the total length of the curve and divide by the expected segment count.
+  len = 0;
+  for (i = 0; i < *n_segments-1; i++) {
+    vectorsub3(d,segments[i].offset,segments[i+1].offset);
+    len += vectorlen(d);
+  }
+  len /= (count);
+  //printf("Merging segments to %d segments of len %.3f\n", count, len);
+
+  // Break up the curve into count intervals of length len.
+  l = 0;
+  n = 1; // Keep the first point.
+  // Find intermediate points.
+  for (i = 0; i < *n_segments-1; i++) {
+    vectorsub3(d,segments[i].offset,segments[i+1].offset);
+    l += vectorlen(d);
+    
+    if ((l + 0.5) > (n * len))
+      segments[n++] = segments[i+1];
+
+    //if (n >= count) break;
+  }
+  segments[n] = segments[*n_segments]; // Keep the last point.
+
+  *n_segments = n;
+
+  // Reorient the segments.  
+  // Warning!  Can interact badly with twist if hose makes a dx/dz (dy=0) turn.
+  // Also, I think this ignores the orientation of the start and end constraints.
+  // The fin on the constraints should guide the orientation (or twist?) somehow.
+  orient(n,segments);
+  return 0;
+}
+
 #define MAX_SEGMENTS 1024*8
 
 part_t segments[MAX_SEGMENTS];
+
+// Create a second list to combine all patches between constraints.
+part_t seglist[MAX_SEGMENTS];
 
 void
 output_line(
@@ -266,6 +314,7 @@ render_hose_segment(
   PRECISION reversed[3][3];
   PRECISION twist[3][3];
   PRECISION twisted[3][3];
+  PRECISION offset[3];
   char     *type;
 
   scale[0][0] = 1;
@@ -290,9 +339,8 @@ render_hose_segment(
   for (i = 0; i <  n_segments-1; i++) {
     PRECISION tx,ty,tz,l,theta;
 
-    if (hose->fill == FIXED) {
+    if (hose->fill != STRETCH) {
       l = 1;
-      *total_twist += hose->twist;
     } else {
       PRECISION d[3];
 
@@ -314,7 +362,6 @@ render_hose_segment(
       type = hose->start.type;
       matrixmult3(scaled,hose->start.orient,scale);
     } else if (i == n_segments-2 && last) {
-      PRECISION offset[3];
       type = hose->end.type;
       offset[0] = 0; offset[1] = l; offset[2] = 0;
       vectorrot(offset,segments[i].orient);
@@ -324,17 +371,44 @@ render_hose_segment(
       type = hose->mid.type;
       matrixmult3(scaled,hose->mid.orient,scale);
     }
-
-    if (hose->fill == FIXED) {
-      PRECISION angle = *total_twist * pi / 360;
+    
+    if (hose->fill != STRETCH) {
+      PRECISION angle;
+      *total_twist += hose->twist;       // One twist before calculating angle.
+#ifdef ORIENT_FN_FIXED_FOR_XZ_AND_YZ_CURVES
+      // For N FIXED segments start with a full twist (not a half twist).
+      if (hose->fill > FIXED) {
+	angle = *total_twist * pi / 180; // Calculate angle after the twist.
+      }else 
+#endif
+      {
+	angle = *total_twist * pi / 360; // Not (pi/180) because we double the twist.
+	*total_twist += hose->twist;     // Another twist after calculating angle.
+	// NOTE: 
+	//       Breaking the twist up this way draws the Minifig chain with
+	//       the links twisted 45 degrees from the start post (instead of 90).
+	//       This looks OK because the real chains sometimes rest that way.
+	//       It also avoids the problem with the orient() fn.
+	//       Chains which turn in the XZ or YZ planes may rotate 45 degrees
+	//       the other way because orient() only works in the XY plane.
+	//       But that's better than the 90 degrees wrong without this hack.
+      }
       twist[0][0] =   cos(angle);
       twist[0][2] =   sin(angle);
       twist[2][0] =  -sin(angle);
       twist[2][2] =   cos(angle);
-      *total_twist += hose->twist;
     }
     matrixmult3(twisted,twist,scaled);
     matrixmult3(reversed,segments[i].orient,twisted);
+
+    // NOTE: We handle hose->(start,mid,end).orient here, but we do nothing
+    //       with the hose->(start,mid,end).offset.
+    // I really think we need to use this to fix the minifig chain link, the 
+    // origin of which is not centered.  Instead its ~4Y over toward one end.
+    offset[0] = 0; offset[1] = 0; offset[2] = 0;
+    vectoradd(offset,hose->mid.offset); // Should also consider first and last.
+    vectorrot(offset,reversed);
+    vectoradd(segments[i].offset,offset);
 
     output_line(output,ghost,group,color,
       segments[i].offset[0], segments[i].offset[1], segments[i].offset[2],
@@ -406,40 +480,46 @@ render_hose(
     part_t first,second;
 
     // reorient imperfectly oriented or displaced constraint types
-
     adjust_constraint(&first,&mid_constraint,0);
 
     // reorient imperflectly oriented or displaced constraint types
-
     adjust_constraint(&second, &constraints[c+1],c == n_constraints-2);
 
     n_segments = MAX_SEGMENTS;
 
-    // create an oversampled curve
+    // For N FIXED segments break up segments[MAX_SEGMENTS] into chunks.
+    if (hose->fill > FIXED)
+    {
+      // Break up seglist into fixed size chunks based on number of constraints.
+      // We could do better by considering the actual length of each chunk...
+      n_segments = MAX_SEGMENTS / (n_constraints - 1);
+      //printf("N_constraints = %d, chunksize = %d\n", n_constraints, n_segments);
+    }
 
+    // create an oversampled curve
     synth_curve(&first,&second,segments,n_segments,hose->stiffness,output);
 
     // Make sure final segment matches second constraint
-
     vectorcp(segments[n_segments-1].offset,second.offset);
 
     // reduce oversampled curve to fixed length chunks, or segments limit
     // by angular resolution
-
-    if (hose->fill == FIXED) {
-      merge_segments_length(segments,&n_segments,hose->mid.attrib,output);
-    } else {
+    if (hose->fill == STRETCH) {
       merge_segments_angular(segments,&n_segments,angular_res, output);
+    }else if (hose->fill == FIXED) {
+      merge_segments_length(segments,&n_segments,hose->mid.attrib,output);
+    }else { // For N fixed size chunks just copy into one big list, merge later.
+      memcpy(seglist+(n_segments*c), segments, n_segments*sizeof(part_t));
     }
 
     mid_constraint = constraints[c+1];
 
-    if (hose->fill == FIXED) {
+    if (hose->fill != STRETCH) {
       vectorcp(mid_constraint.offset,segments[n_segments-2].offset);
     }
 
     // output the result
-
+    if (hose->fill <= FIXED)
     render_hose_segment(
       hose,
       ghost,
@@ -450,6 +530,26 @@ render_hose(
       c ==0,
       c == n_constraints-2,
       output);
+  }
+
+  if (hose->fill > FIXED) {
+    n_segments *= c;
+    merge_segments_count(seglist,&n_segments,hose->fill,output);
+    //printf("Merged segments to %d segments of len %d\n", n_segments, hose->mid.attrib);
+    
+    render_hose_segment(
+      hose,
+      ghost,
+      group,
+      color,
+      seglist,n_segments,
+      &total_twist,
+      1, // First AND
+      1, // Last part of the hose. (seglist = one piece hose)
+      output);
+      //printf("Total twist = %.1f (%.1f * %.1f) n = %d\n", 
+	       //total_twist, hose->twist, total_twist/hose->twist, n_segments);
+
   }
 
   if (group) {
