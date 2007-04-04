@@ -8,71 +8,178 @@
 #include "curve.h"
 #include "mathlib.h"
 
-/*
- * a 1x1 brick is 20 LDU wide and 24 LDU high
- *
- * hose length = 14 brick widths long = 280 LDU
- * number of ribs = 45
- * 6.2 LDU per rib
- *
- */
-
-void orient(
-  int     n_segments,
-  part_t *segments)
+static void
+mult_point(PRECISION r[3], PRECISION lhs[3], PRECISION rhs[3])
 {
+  PRECISION tt;
+
+  r[0] = lhs[1]*rhs[2] - lhs[2]*rhs[1];
+  r[1] = lhs[2]*rhs[0] - lhs[0]*rhs[2];
+  r[2] = lhs[0]*rhs[1] - lhs[1]*rhs[0];
+
+  tt = sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]);
+
+  r[0] /= tt;
+  r[1] /= tt;
+  r[2] /= tt;
+}
+
+static void
+make_rotation_pp(
+  PRECISION r[3][3],
+  PRECISION up[3],
+  PRECISION front[3])
+{
+  PRECISION side[3];
+
+  mult_point(side,front,up);
+
+  r[0][0] = up[0];
+  r[1][0] = up[1];
+  r[2][0] = up[2];
+  r[0][1] = front[0];
+  r[1][1] = front[1];
+  r[2][1] = front[2];
+  r[0][2] = side[0];
+  r[1][2] = side[1];
+  r[2][2] = side[2];
+}
+
+static void
+rotate_point(
+  PRECISION r[3],
+  PRECISION m[3][3])
+{
+  PRECISION t[3];
+
+  t[0] = r[0]*m[0][0] + r[1]*m[0][1] + r[2]*m[0][2];
+  t[1] = r[0]*m[1][0] + r[1]*m[1][1] + r[2]*m[1][2];
+  t[2] = r[0]*m[2][0] + r[1]*m[2][1] + r[2]*m[2][2];
+
+  r[0] = t[0];
+  r[1] = t[1];
+  r[2] = t[2];
+}
+
+void
+orient2(
+  part_t       *start,
+  part_t       *end,
+  int           n_segments,
+  part_t       *segments)
+{
+  PRECISION up[3];
   int i;
 
+  up[0] = 1;
+  up[1] = 0;
+  up[2] = 0;
+
+  rotate_point(up,start->orient);
+  printf("%5.2f %5.2f %5.2f\n",up[0],up[1],up[2]);
+
   for (i = 0; i < n_segments-1; i++) {
+    PRECISION r;
+    PRECISION front[3];
+    PRECISION t[3];
 
-      PRECISION dx, dy, dz;
-      PRECISION orient[3][3];
-      PRECISION L1,L2;
+    front[0] = segments[i+1].offset[0] - segments[i].offset[0];
+    front[1] = segments[i+1].offset[1] - segments[i].offset[1];
+    front[2] = segments[i+1].offset[2] - segments[i].offset[2];
 
-      // determine the orientation of the part in the XY plane
-      // 
-      // WARNING!  This is bad for twist if the hose mostly bends in XZ or YZ plane.
-      // Start with the orient of the 1st constraint (the fin), and adjust from there?
-      // 
-      // Quaternion roll interpolation?  Make a new orientQ() function to convert
-      // constraint orientations to quaternions & slerp the intermediate points?
-      // 
-      // Sounds like Kevin already did it:  http://news.lugnet.com/cad/dev/?n=10517
-      // (dx,dy,dz) + an interpolated up vector easily converts to a quaternion.
-      // Then just convert the quaternion to an orient matrix and its done. 
-      // The only thing easier would be to use spin angles instead of up vectors.
+    r = sqrt(front[0]*front[0] + front[1]*front[1] + front[2]*front[2]);
 
-      dx = segments[i+1].offset[0] - segments[i].offset[0];
-      dy = segments[i+1].offset[1] - segments[i].offset[1];
-      dz = segments[i+1].offset[2] - segments[i].offset[2];
+    front[0] /= r;
+    front[1] /= r;
+    front[2] /= r;
 
-      L1 = sqrt(dx*dx + dy*dy);
-      L2 = sqrt(dx*dx + dy*dy + dz*dz);
-      if (L1 == 0) {
+    mult_point(t,front,up); // side
+    mult_point(up,t,front); // side * front
 
-        segments[i].orient[0][0] = 1;
-        segments[i].orient[1][0] = 0;
-        segments[i].orient[2][0] = 0;
-        segments[i].orient[0][1] = 0;
-        segments[i].orient[1][1] = 0;
-        segments[i].orient[2][1] =-1;
-        segments[i].orient[0][2] = 0;
-        segments[i].orient[1][2] = 1;
-        segments[i].orient[2][2] = 0;
-      } else {
-        segments[i].orient[0][0] =  dy/L1;  //  cos
-        segments[i].orient[1][0] = -dx/L1;  //  sin
-        segments[i].orient[2][0] =  0;
-        segments[i].orient[0][1] =  dx/L2;  // -sin
-        segments[i].orient[1][1] =  dy/L2;  //  cos
-        segments[i].orient[2][1] =  dz/L2;
-        segments[i].orient[0][2] = -dx*dz/(L1*L2);
-        segments[i].orient[1][2] = -dy*dz/(L1*L2);
-        segments[i].orient[2][2] =  L1/L2;
-      }
+    make_rotation_pp(segments[i].orient,up,front);
   }
 }
 
+PRECISION hose_length(
+  int           n_segments,
+  part_t       *segments)
+{
+  PRECISION length = 0;
+  int i;
+
+  for (i = 0; i < n_segments-1; i++) {
+    PRECISION l[3];
+
+    vectorsub3(l,segments[i+1].offset,segments[i].offset);
+
+    length += vectorlen(l);
+  }
+  return length;
+}
+
+void
+orient(
+  part_t       *start,
+  part_t       *end,
+  int           n_segments,
+  part_t       *segments)
+{
+  PRECISION start_up[3],end_up[3],up[3];
+  PRECISION total_length = hose_length(n_segments,segments);
+  PRECISION cur_length;
+  int i;
+
+  start_up[0] = 1;
+  start_up[1] = 0;
+  start_up[2] = 0;
+  rotate_point(start_up,start->orient);
+
+  end_up[0] = 1;
+  end_up[1] = 0;
+  end_up[2] = 0;
+  rotate_point(end_up,end->orient);
+
+  /* Up vector controls the twist
+   *
+   * Interpolate the up vector based on start up vector, and
+   * end up vector, and how far we are down the hose's total
+   * length
+   */
+
+  for (i = 0; i < n_segments-1; i++) {
+    PRECISION r;
+    PRECISION front[3];
+    PRECISION t[3];
+
+    cur_length = hose_length(i,segments);
+
+    cur_length /= total_length;
+
+    up[0] = start_up[0]*(1-cur_length) + end_up[0]*cur_length;
+    up[1] = start_up[1]*(1-cur_length) + end_up[1]*cur_length;
+    up[2] = start_up[2]*(1-cur_length) + end_up[2]*cur_length;
+
+    r = sqrt(up[0]*up[0] + up[1]*up[1] + up[2]*up[2]);
+    up[0] /= r;
+    up[1] /= r;
+    up[2] /= r;
+
+    front[0] = segments[i+1].offset[0] - segments[i].offset[0];
+    front[1] = segments[i+1].offset[1] - segments[i].offset[1];
+    front[2] = segments[i+1].offset[2] - segments[i].offset[2];
+
+    r = sqrt(front[0]*front[0] + front[1]*front[1] + front[2]*front[2]);
+
+    front[0] /= r;
+    front[1] /= r;
+    front[2] /= r;
+
+    mult_point(t,front,up); // side
+    mult_point(up,t,front); // side * front
+
+    make_rotation_pp(segments[i].orient,up,front);
+  }
+}
 
 int
 synth_curve(
@@ -91,7 +198,6 @@ synth_curve(
   PRECISION ptp,ratio;
   PRECISION ptp_sum;
   int i,j,n;
-  PRECISION up[3];
 
   vector[0] = 0;
   vector[1] = attrib;
@@ -237,7 +343,7 @@ synth_curve(
     (1 - n_time) * 3 * n_time * n_time * (end->offset[2] - stop_speed_v[2]) +
      n_time * n_time * n_time * end->offset[2];
 
-  orient(n_segments, segments);
+  // orient(n_segments, segments);
 
   return 0; /* it all worked */
 }

@@ -17,12 +17,15 @@ typedef struct {
   char      type[128];
   PRECISION orient[3][3];
   PRECISION offset[3];
+  PRECISION twist;
   int       attrib;
 } part_t;
 
-extern PRECISION hose_res_angle;
+extern PRECISION max_bend;
+extern PRECISION max_twist;
 extern PRECISION band_res;
 extern int group_size;
+extern int ldraw_part;
 
 void
 output_line(
@@ -43,6 +46,8 @@ output_line(
   PRECISION       k,
   PRECISION       l,
   char            *type);
+
+void list_products( void );
 
 /************************************************************************
  *

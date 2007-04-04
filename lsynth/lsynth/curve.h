@@ -18,6 +18,18 @@ synth_curve(
   PRECISION attrib,
   FILE     *output);
 
+PRECISION
+hose_length(
+  int       n_segments,
+  part_t   *segments);
+  
+void
+orient(
+  part_t   *start,
+  part_t   *end,
+  int       n_segments,
+  part_t   *segments);
+
 #ifdef _cplusplus
 };
 #endif

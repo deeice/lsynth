@@ -84,9 +84,15 @@ vectorrot3(
   PRECISION r[3],
   PRECISION m[3][3])
 {
+#if 0
+  t[0] = r[0]*m[0][0] + r[1]*m[1][0] + r[2]*m[2][0];
+  t[1] = r[0]*m[0][1] + r[1]*m[1][1] + r[2]*m[2][1];
+  t[2] = r[0]*m[0][2] + r[1]*m[1][2] + r[2]*m[2][2];
+#else
   t[0] = r[0]*m[0][0] + r[1]*m[0][1] + r[2]*m[0][2];
   t[1] = r[0]*m[1][0] + r[1]*m[1][1] + r[2]*m[1][2];
   t[2] = r[0]*m[2][0] + r[1]*m[2][1] + r[2]*m[2][2];
+#endif
 }
 
 void
@@ -261,7 +267,7 @@ matrixinv(
   PRECISION src[3][3])
 {
   int i,j,k;
-  int p[3];
+  PRECISION p[3];
   PRECISION h,q,s,sup,pivot;
 
   matrixcp(a,src);

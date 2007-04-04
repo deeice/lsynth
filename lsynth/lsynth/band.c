@@ -8,6 +8,7 @@
 #include "hose.h"
 #include "math.h"
 #include <float.h>
+#include "strings.h"
 
 /*
  * 0 SYNTH BEGIN DEFINE BAND <fill> RUBBER_BAND "Descr" <scale> <thresh>
@@ -58,7 +59,7 @@ isbandtype(char *type)
   int i;
 
   for (i = 0; i < N_BAND_TYPES; i++) {
-    if (strncmp(band_types[i].type,type,strlen(band_types[i].type)) == 0) {
+    if (strncasecmp(band_types[i].type,type,strlen(band_types[i].type)) == 0) {
       return 1;
     }
   }
@@ -71,7 +72,7 @@ isbandconstraint(char *type)
   int i;
 
   for (i = 0; i < N_BAND_CONSTRAINTS; i++) {
-    if (strcmp(band_constraints[i].type,type) == 0) {
+    if (strcasecmp(band_constraints[i].type,type) == 0) {
       return 1;
     }
   }
@@ -88,6 +89,10 @@ list_band_constraints(void)
     printf("    %11s\n",band_constraints[i].type);
   }
 }
+
+/*
+ * Calculate the issues of crossers
+ */
 
 void
 calc_crosses(
@@ -136,6 +141,11 @@ calc_crosses(
     }
   }
 }
+
+/*
+ * Calculate the entry and exit angles of a band
+ * around a constraint.
+ */
 
 void
 calc_angles(
@@ -221,6 +231,10 @@ calc_angles(
   }
 }
 
+/*
+ * figure out the intersections of a line and a circle.
+ */
+
 int intersect_line_circle_2D(
   PRECISION xo,
   PRECISION yo,
@@ -264,6 +278,10 @@ int intersect_line_circle_2D(
   *y = yo + g*t;
   return 0;
 }
+
+/*
+ * determine the tangent we want.
+ */
 
 int calc_tangent_line(
   LSL_band_constraint *k,
@@ -393,6 +411,11 @@ int calc_tangent_line(
   return 0;
 }
 
+/*
+ * Render the arc around the constraint and the line to the next
+ * constraint
+ */
+
 int draw_arc_line(
   band_attrib_t       *type,
   LSL_band_constraint *constraint,
@@ -480,7 +503,7 @@ int draw_arc_line(
 
         // We performed this to start:
         //   1.  move the assembly so the first constraint is at the origin
-        //   2.  rotate offsetations about the inverse of the first constraint's
+        //   2.  rotate offset ations about the inverse of the first constraint's
         //       orientation bringing everything into the X/Y plane
 
         // Now we're putting together the segments and putting them back into place
@@ -493,7 +516,7 @@ int draw_arc_line(
 
         vectorrot3(part.offset,type->tangent.offset,part.orient);
 
-        //   3.  Calculate the tangent part's offsetation in the X/Y plane
+        //   3.  Calculate the tangent part's orientation in the X/Y plane
 
         foffset[0] = constraint->crossings[j][0] + dx * i / n - part.offset[0];
         foffset[1] = constraint->crossings[j][1] + dy * i / n - part.offset[1];
@@ -501,7 +524,7 @@ int draw_arc_line(
 
         vectorcp(part.offset,foffset);
 
-        //   4.  Reoffsetate the tangent part in the X/Y plane based on the first
+        //   4.  Reorient the tangent part in the X/Y plane based on the first
         //       constraint's offset (for things like technic turntable top,
         //       where the gear plane does not go through the origin.
 
@@ -519,7 +542,7 @@ int draw_arc_line(
 
         vectorrot( part.offset,absolute->orient);
 
-        //   7.  Now add the absolute offsetation of the first constraint
+        //   7.  Now add the absolute orientation of the first constraint
 
         vectoradd( part.offset,absolute->offset);
 
@@ -545,15 +568,9 @@ int draw_arc_line(
           group,
           color,
           part.offset[0],part.offset[1],part.offset[2],
-          part.orient[0][0],
-          part.orient[0][1],
-          part.orient[0][2],
-          part.orient[1][0],
-          part.orient[1][1],
-          part.orient[1][2],
-          part.orient[2][0],
-          part.orient[2][1],
-          part.orient[2][2],
+          part.orient[0][0],part.orient[0][1],part.orient[0][2],
+          part.orient[1][0],part.orient[1][1],part.orient[1][2],
+          part.orient[2][0],part.orient[2][1],part.orient[2][2],
           type->tangent.type);
       }
     }
@@ -642,11 +659,15 @@ int draw_arc_line(
         PRECISION scale[3][3];
         PRECISION angle = 2 * pi / n;
         PRECISION l = type->scale*sin(angle);
-        int i,j;
+        int k,j;
 
-        for (i = 0; i < 3; i++) {
+        if (i + 1 == steps) {
+          l *= 5;
+        }
+
+        for (k = 0; k < 3; k++) {
           for (j = 0; j < 3; j++) {
-            scale[i][j] = 0;
+            scale[k][j] = 0;
           }
         }
         scale[0][0] = 1;
@@ -718,15 +739,9 @@ int draw_arc_line(
         group,
         color,
         part.offset[0],part.offset[1],part.offset[2],
-        part.orient[0][0],
-        part.orient[0][1],
-        part.orient[0][2],
-        part.orient[1][0],
-        part.orient[1][1],
-        part.orient[1][2],
-        part.orient[2][0],
-        part.orient[2][1],
-        part.orient[2][2],
+        part.orient[0][0],part.orient[0][1],part.orient[0][2],
+        part.orient[1][0],part.orient[1][1],part.orient[1][2],
+        part.orient[2][0],part.orient[2][1],part.orient[2][2],
         part.type);
 
       vectorcp(f,s);
@@ -746,24 +761,17 @@ showconstraints(
   int i;
 
   for (i = 0; i < n_constraints; i++) {
+    part_t *cp = &constraints[i].part;
     output_line(
       output,
       0,
       NULL,
       color,
-      constraints[i].part.offset[0],
-      constraints[i].part.offset[1],
-      constraints[i].part.offset[2],
-      constraints[i].part.orient[0][0],
-      constraints[i].part.orient[0][1],
-      constraints[i].part.orient[0][2],
-      constraints[i].part.orient[1][0],
-      constraints[i].part.orient[1][1],
-      constraints[i].part.orient[1][2],
-      constraints[i].part.orient[2][0],
-      constraints[i].part.orient[2][1],
-      constraints[i].part.orient[2][2],
-      constraints[i].part.type);
+      cp->offset[0],   cp->offset[1],   cp->offset[2],
+      cp->orient[0][0],cp->orient[0][1],cp->orient[0][2],
+      cp->orient[1][0],cp->orient[1][1],cp->orient[1][2],
+      cp->orient[2][0],cp->orient[2][1],cp->orient[2][2],
+      cp->type);
   }
 #endif
 }
@@ -826,7 +834,7 @@ synth_band(
   /* Search for band type */
 
   for (i = 0; i < N_BAND_TYPES; i++) {
-    if (strcmp(type,band_types[i].type) == 0) {
+    if (strcasecmp(type,band_types[i].type) == 0) {
       band_type = &band_types[i];
       break;
     }
@@ -845,11 +853,11 @@ synth_band(
     constraints[i].n_crossings  = 0;
     constraints[i].layer        = -1;
     was_cross = 0;
-    if (strcmp(constraints[i].part.type,"INSIDE") == 0) {
+    if (strcasecmp(constraints[i].part.type,"INSIDE") == 0) {
       inside = 1;
-    } else if (strcmp(constraints[i].part.type,"OUTSIDE") == 0) {
+    } else if (strcasecmp(constraints[i].part.type,"OUTSIDE") == 0) {
       inside = 0;
-    } else if (strcmp(constraints[i].part.type,"CROSS") == 0) {
+    } else if (strcasecmp(constraints[i].part.type,"CROSS") == 0) {
       inside ^= 1;
 
     } else {
@@ -858,7 +866,7 @@ synth_band(
       // search the constraints table
 
       for (k = 0; k < N_BAND_CONSTRAINTS; k++) {
-        if (strcmp(constraints[i].part.type,band_constraints[k].type) == 0) {
+        if (strcasecmp(constraints[i].part.type,band_constraints[k].type) == 0) {
           constraints[i].band_constraint_n = k;
 
           constraints[i].radius = band_constraints[k].attrib;
@@ -893,7 +901,7 @@ synth_band(
     }
   }
 
-  showconstraints(output,constraints,n_constraints,14);
+  // showconstraints(output,constraints,n_constraints,14);
 
   /* 2. bring the entire assembly into the part's natural orientation */
 
@@ -901,7 +909,7 @@ synth_band(
 
   rotate_constraints(constraints,n_constraints,inv);
 
-  showconstraints(output,constraints,n_constraints,4);
+  // showconstraints(output,constraints,n_constraints,4);
 
   /* 3. bring the assembly into the X/Y plane (necessary for first constraints
    *    who's gear plane is different that the default gear plane used by
@@ -911,7 +919,7 @@ synth_band(
   rotate_constraints(constraints,n_constraints,
     band_constraints[constraints[first].band_constraint_n].orient);
 
-  showconstraints(output,constraints,n_constraints,15);
+  //showconstraints(output,constraints,n_constraints,15);
 
   /* 4. offset constraint's who's gear plane does not intersect with the
    *    origin.
@@ -924,7 +932,7 @@ synth_band(
     }
   }
 
-  showconstraints(output,constraints,n_constraints,3);
+  //showconstraints(output,constraints,n_constraints,3);
 
   /* figure out the tangents' intersections with circles */
 
@@ -1015,7 +1023,9 @@ synth_band(
    * coordinates.
    *****************************************************/
 
-  fprintf(output,"0 SYNTH SYNTHESIZED BEGIN\n");
+  if ( ! ldraw_part) {
+    fprintf(output,"0 SYNTH SYNTHESIZED BEGIN\n");
+  }
 
   group_size = 0;
 
@@ -1050,8 +1060,9 @@ synth_band(
   if (group) {
     fprintf(output,"0 GROUP %d %s\n",group_size,group);
   }
-  fprintf(output,"0 SYNTH SYNTHESIZED END\n");
-  printf("Synthesized %s\n",type);
+  if ( ! ldraw_part) {
+    fprintf(output,"0 SYNTH SYNTHESIZED END\n");
+  }
   return 0;
 
 }
