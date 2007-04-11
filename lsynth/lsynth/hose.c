@@ -673,7 +673,7 @@ render_hose(
     // NOTE: I really need to study the new orient code and see why it 
     // does not seem to work until after merge_segment_count() below.
     // It needs to orient based on ALL constraints, not just first and last.
-    adjust_constraint(&first,&mid_constraint,0);
+    adjust_constraint(&first,&constraints[0],0);
     adjust_constraint(&second, &constraints[n_constraints-1],1);
 
     n_segments *= c;

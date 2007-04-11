@@ -594,7 +594,7 @@ orientq(
 	 orient[2][2]);
 
   up = M3Det(start->orient);
-  printf("Det[S] = %.2f\n\n)", up);
+  printf("Det[S] = %.2f\n\n", up); // Check the determinant for mirrors.
 
   quat2axisangle(start_q, v, &start_up);
   printf("M[S] = (%.2f, %.2f, %.2f,   %.2f, %.2f, %.2f,   %.2f, %.2f, %.2f)\n",
