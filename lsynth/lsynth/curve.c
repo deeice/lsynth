@@ -17,11 +17,16 @@ mult_point(PRECISION r[3], PRECISION lhs[3], PRECISION rhs[3])
   r[1] = lhs[2]*rhs[0] - lhs[0]*rhs[2];
   r[2] = lhs[0]*rhs[1] - lhs[1]*rhs[0];
 
-  tt = sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]);
+  tt = r[0]*r[0] + r[1]*r[1] + r[2]*r[2];
+ 
+  if (tt > 0.0)
+  {
+    tt = sqrt(tt);
 
-  r[0] /= tt;
-  r[1] /= tt;
-  r[2] /= tt;
+    r[0] /= tt;
+    r[1] /= tt;
+    r[2] /= tt;
+  }
 }
 
 static void
@@ -365,28 +370,38 @@ synth_curve(
 /***************************************************************/
 
 /***************************************************************/
-void normalizequat(PRECISION q[4])
+int normalizequat(PRECISION q[4])
 {
   PRECISION L;
 
   L = sqrt(q[0]*q[0] + q[1]*q[1] + q[2]*q[2] + q[3]*q[3]);
 
+  if (L == 0.0)
+    return 0;  // Uh Oh, the magnitude is zero.
+
   q[0] /= L;
   q[1] /= L;
   q[2] /= L;
   q[3] /= L;
+
+  return 1;
 }
 
 /***************************************************************/
-void normalize(PRECISION v[3])
+int normalize(PRECISION v[3])
 {
   PRECISION L;
 
   L = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
 
+  if (L == 0.0)
+    return 0;  // Uh Oh, the magnitude is zero.
+
   v[0] /= L;
   v[1] /= L;
   v[2] /= L;
+
+  return 1;
 }
 
 /***************************************************************/
@@ -538,10 +553,16 @@ PRECISION quat2axisangle(
   return *a;
 }
 
-/***************************************************************/
+//**********************************************************************
+PRECISION dotprod(PRECISION a[3], PRECISION b[3])
+{
+   return (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]);
+}
+
+//**********************************************************************
 // Convert start, end constraints and n points to oriented segments
 // using quaternion.
-/***************************************************************/
+//**********************************************************************
 void
 orientq(
   part_t       *start,
@@ -549,55 +570,59 @@ orientq(
   int           n_segments,
   part_t       *segments)
 {
-  PRECISION start_up,end_up,up; // Up is now a twist angle, not a vector.
+  PRECISION start_up[3],end_up[3],up[3];
+  PRECISION start_v[3],end_v[3],v[3];
   PRECISION start_q[4],end_q[4],q[4];
-  PRECISION v[3];
+  PRECISION m[3][3];
   PRECISION total_length = hose_length(n_segments,segments);
   PRECISION cur_length;
+  PRECISION r;
+  PRECISION front[3];
+  PRECISION t[3];
   int i;
 
-  // Get the start and end twist angles (up vectors)
-
-  // NOTE:  matrix2quat() is broken.  Should I normalize m[3][3] first?
+  // Get the start and end velocity vectors.
+  // The basic HoseSeg.dat files all extend the hose along the -Y axis.
+#if 1
+  start_v[0] = end_v[0] = 0;
+  start_v[1] = end_v[1] = -1; 
+  start_v[2] = end_v[2] = 0;
+#else
+  start_v[0] = end_v[0] = 0;
+  start_v[1] = end_v[1] = 1; // Try positive Y.  Maybe it'll fix offset.
+  start_v[2] = end_v[2] = 0;
+  // It does fix it.  Why?  Does some other matrix flip Y in hose.c?
+  // Or is it just that I no longer need the 10 offset in lsynth.mpd?
   //
-  // Maybe I should get the up and forward vectors the orient() way, 
-  // then convert up to an angle.  (How?  dot product?)
+  // I substituted a constraint for one of the chain links and it points
+  // backwards with this code.  So I want -Y and fix the lsynth.mpd offset.
+  //
+  // Run the original code and substitute a constraint to see if it flips Y.
+  // Yes, they all point backwards.  
+  // Why?  Is it just my LENGTH21 code in hose.c?  Or is it all hoses?
+#endif
+  rotate_point(start_v,start->orient);
+  rotate_point(end_v,end->orient);
+  normalize(start_v); // Normalize again,
+  normalize(end_v);   // Just in case orient includes a stretch.
 
-  matrix2quat(start->orient, start_q);
-  matrix2quat(end->orient, end_q);
+  // Get the up vectors.  The fin on LS00.dat is along -Z so rotate that.
+  start_up[0] = end_up[0] = 0;
+  start_up[1] = end_up[1] = 0;
+  start_up[2] = end_up[2] = -1;
+  rotate_point(start_up,start->orient);
+  rotate_point(end_up,end->orient);
+  normalize(start_up); // Normalize again,
+  normalize(end_up);   // Just in case orient includes a stretch.
 
 #define DEBUG_QUAT_MATH 1
 #ifdef DEBUG_QUAT_MATH
- {
-  PRECISION pi = 2*atan2(1,0);
-  PRECISION degrees = 180.0 / pi;
-
-  // Sanity check.  Convert v[0,0,-1] and pi to quat.
-  PRECISION orient[3][3];
-  v[0] = 0;
-  v[1] = 0;
-  v[2] = -1;
-  up = pi;
-  axisangle2quat(v, up, q);
-  printf("V[T] = (%.2fx, %.2fy, %.2fz, %.2f up) => Q(%.2f, %.2f, %.2f, %.2f)\n",
-	   v[0],v[1],v[2], up*degrees, q[0],q[1],q[2],q[3]);
-  quat2matrix(q, orient);
-  printf("M[T] = (%.2f, %.2f, %.2f,   %.2f, %.2f, %.2f,   %.2f, %.2f, %.2f)\n\n",
-	 orient[0][0],
-	 orient[0][1],
-	 orient[0][2],
-	 orient[1][0],
-	 orient[1][1],
-	 orient[1][2],
-	 orient[2][0],
-	 orient[2][1],
-	 orient[2][2]);
-
-  up = M3Det(start->orient);
-  printf("Det[S] = %.2f\n\n", up); // Check the determinant for mirrors.
-
-  quat2axisangle(start_q, v, &start_up);
-  printf("M[S] = (%.2f, %.2f, %.2f,   %.2f, %.2f, %.2f,   %.2f, %.2f, %.2f)\n",
+  {
+    PRECISION pi = 2*atan2(1,0);
+    PRECISION degrees = 180.0 / pi;
+      
+    printf("V[S] = (%.2fx, %.2fy, %.2fz)\n", start_v[0],start_v[1],start_v[2]);
+    printf("M[S] = (%.2f, %.2f, %.2f,   %.2f, %.2f, %.2f,   %.2f, %.2f, %.2f)\n",
 	 start->orient[0][0],
 	 start->orient[0][1],
 	 start->orient[0][2],
@@ -607,69 +632,114 @@ orientq(
 	 start->orient[2][0],
 	 start->orient[2][1],
 	 start->orient[2][2]);
-  printf("V[S] = (%.2fx, %.2fy, %.2fz, %.2f up) => Q(%.2f, %.2f, %.2f, %.2f)\n",
-	   v[0],v[1],v[2], start_up*degrees, start_q[0],start_q[1],start_q[2],start_q[3]);
-  quat2axisangle(end_q, v, &end_up);
- }
-#else
-  start_up = acos(start_q[3]) * 2.0;
-  end_up = acos(end_q[3]) * 2.0;
+  }
 #endif
 
-  /* Up angle controls the twist
+  /* Up vector controls the twist
    *
-   * Interpolate the up angle based on start up angle, end up angle, 
-   * and how far we are down the hose's total length.
+   * Interpolate the up vector based on start up vector, and
+   * end up vector, and how far we are down the hose's total
+   * length
    */
 
-  for (i = 1; i < n_segments; i++) {
-    PRECISION v0[3];
+  for (i = 0; i < n_segments-1; i++) {
 
     cur_length = hose_length(i,segments);
+
     cur_length /= total_length;
-    up = start_up*(1-cur_length) + end_up*cur_length;
 
-    // Get the axis before segment i.
-    v0[0] = segments[i].offset[0] - segments[i-1].offset[0];
-    v0[1] = segments[i].offset[1] - segments[i-1].offset[1];
-    v0[2] = segments[i].offset[2] - segments[i-1].offset[2];
-    normalize(v0);
+    up[0] = start_up[0]*(1-cur_length) + end_up[0]*cur_length;
+    up[1] = start_up[1]*(1-cur_length) + end_up[1]*cur_length;
+    up[2] = start_up[2]*(1-cur_length) + end_up[2]*cur_length;
+    normalize(up);
 
-    // Get the axis after segment i.
     v[0] = segments[i+1].offset[0] - segments[i].offset[0];
     v[1] = segments[i+1].offset[1] - segments[i].offset[1];
     v[2] = segments[i+1].offset[2] - segments[i].offset[2];
     normalize(v);
 
-    // Tangent at segment i is the average of the before and after axis.
-    v[0] += v0[0];
-    v[1] += v0[1]; 
-    v[2] += v0[2];
-    normalize(v);
-    
-    // Convert to a quaternion, and convert that to a rotation matrix.
-    axisangle2quat(v, up, q);
-    normalizequat( q );
-    quat2matrix(q, segments[i].orient);
+    //Dot product gives turn angle.  a.b=|a||b|cos(theta)
+    //We normalized so |a|=|b|=1, which means theta = acos(a.b).
+    r = dotprod(v, start_v);
+    r = acos(r);
 
-#ifdef DEBUG_QUAT_MATH
+    //Cross product gives turn axis.
+    mult_point(t, start_v, v);
+    if (normalize(t) == 0)
     {
-      PRECISION pi = 2*atan2(1,0);
-      PRECISION degrees = 180.0 / pi;
-      
-      printf("  V[%d] = (%.2fx, %.2fy, %.2fz, %.2f up) => Q(%.2f, %.2f, %.2f, %.2f)\n",
-	     i,v[0],v[1],v[2], up*degrees, q[0],q[1],q[2],q[3]);
+      if (dotprod(v, start_v) < 0)
+      {
+	printf("***  180 degree turn!!!\n");
+	vectorcp(t, start_up);
+      }
+      else 
+      {
+	printf("***  0 degree turn!!!\n");
+	if (i)
+	  matrixcp(segments[i].orient, segments[i-1].orient);
+	else 
+	  matrixcp(segments[i].orient, start->orient);
+	continue;
+      }
     }
-#endif
-  }
+
+    // NOTE: gotta check cross product.  
+    // If magnitude is zero we have either a 180 or 0 degree turn.
+    // 
+    // Dot product can differentiate between 0 and 180 turn.
+    // Dot product of acute is negative (dot product of 180 = -1).
+    // Dot product of perpendicular is 0.
+    // Dot product of obtuse is positive (dot product of 0 = 1).
+    //
+    // If we get a 0 degree turn, just reuse previous orient matrix.
+    // If we get a 180 degree turn, reuse the previous turn axis.
+    // (Any axis in the perpendicular plane can make the 180, 
+    // but we want to maintain the up vector, so reuse the previous axis.)
+
+    // I think I can reasonably expect to avoid the 180 degree turns
+    // if we apply small incremental turns to the previous orient matrix
+    // instead of always applying the whole turn from the start matrix.
+    // But do we lose control of the up vector if we do that?
+
+    // Convert to a quaternion, and convert that to a rotation matrix.
+    axisangle2quat(t, r, q);
+    normalizequat( q );
+    quat2matrix(q, m);
+
+    // Then multiply the rotation from that matrix to the start orientation.
+    matrixmult3(segments[i].orient,m,start->orient);
+
 #ifdef DEBUG_QUAT_MATH
   {
     PRECISION pi = 2*atan2(1,0);
     PRECISION degrees = 180.0 / pi;
       
-    quat2axisangle(end_q, v, &end_up);
-    printf("V[E] = (%.2fx, %.2fy, %.2fz, %.2f up) => Q(%.2f, %.2f, %.2f, %.2f)\n",
-	   v[0],v[1],v[2], end_up*degrees, end_q[0],end_q[1],end_q[2],end_q[3]);
+    printf("V[%d] = (%.2fx, %.2fy, %.2fz) TURN = %.2fdeg (%.2f, %.2f, %.2f)\n",
+	   i, v[0],v[1],v[2], r*degrees, t[0],t[1],t[2]);
+#if 0
+    printf("M[%d] = (%.2f, %.2f, %.2f,   %.2f, %.2f, %.2f,   %.2f, %.2f, %.2f)\n",
+	   i,
+	 segments[i].orient[0][0],
+	 segments[i].orient[0][1],
+	 segments[i].orient[0][2],
+	 segments[i].orient[1][0],
+	 segments[i].orient[1][1],
+	 segments[i].orient[1][2],
+	 segments[i].orient[2][0],
+	 segments[i].orient[2][1],
+	 segments[i].orient[2][2]);
+#endif
+  }
+#endif
+
+  }
+
+#ifdef DEBUG_QUAT_MATH
+  {
+    PRECISION pi = 2*atan2(1,0);
+    PRECISION degrees = 180.0 / pi;
+      
+    printf("V[E] = (%.2fx, %.2fy, %.2fz)\n", end_v[0],end_v[1],end_v[2]);
     printf("M[E] = (%.2f, %.2f, %.2f,   %.2f, %.2f, %.2f,   %.2f, %.2f, %.2f)\n",
 	 end->orient[0][0],
 	 end->orient[0][1],
@@ -682,5 +752,43 @@ orientq(
 	 end->orient[2][2]);
   }
 #endif
+
+  // Now we should be able to add the spin
+  // Rotate start_up by segments[n].orient
+  // Use dot product to get the extra spin angle between that and end_up.
+  // Spread out the spin (as a pre-rotation around Y) over the length of hose.
+  // Actually, we can calculate this extra spin ahead of time
+  // and do the pre-rotation inside the for loop we already have.
+
+#ifdef DEBUG_QUAT_MATH
+  printf("U[S] = (%.2fx, %.2fy, %.2fz)\n", start_up[0],start_up[1],start_up[2]);
+#endif
+
+  rotate_point(start_up,segments[n_segments-2].orient);
+  normalize(start_up); // Normalize again
+
+  // We seem to have a problem here.  Is it the -Y thing?
+  // The rotated u[S] should match the U[E], unless there is some extra twist.
+  // It doesn't match, so something is wrong.
+
+#ifdef DEBUG_QUAT_MATH
+  printf("u[S] = (%.2fx, %.2fy, %.2fz)\n", start_up[0],start_up[1],start_up[2]);
+  printf("U[E] = (%.2fx, %.2fy, %.2fz)\n", end_up[0],end_up[1],end_up[2]);
+#endif
+
+  //Dot product gives turn angle.  a.b=|a||b|cos(theta)
+  //We normalized so |a|=|b|=1, which means theta = acos(a.b).
+  r = dotprod(start_up, end_up);
+  r = acos(r);
+
+#ifdef DEBUG_QUAT_MATH
+  {
+    PRECISION pi = 2*atan2(1,0);
+    PRECISION degrees = 180.0 / pi;
+      
+    printf("  ExtraTwist = %.2fdeg\n", r*degrees);
+  }
+#endif
+
 }
 
