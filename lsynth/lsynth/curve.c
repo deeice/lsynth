@@ -820,8 +820,9 @@ orientq(
   rotate_point(start_up,segments[n_segments-2].orient);
   normalize(start_up); // Normalize again
 #else
-  matrixcp(m, segments[n_segments-2].orient);
-  vectorcp(t, start_up); // Should reuse the previous t.  Did I save it?
+  //matrixcp(m, segments[n_segments-2].orient);
+  matrixcp(m, start->orient); // Reuse start->orient for 0 degree twist.
+  vectorcp(t, start_up); // Should I reuse the previous t.  Did I save it?
   r = get_turn_mat(m, start->orient, start_v, end_v, t);
   rotate_point(start_up,m);
   normalize(start_up); // Normalize again

@@ -468,8 +468,8 @@ render_hose_segment(
     if (hose->fill != STRETCH) {
       PRECISION angle;
       *total_twist += hose->twist;       // One twist before calculating angle.
-#ifdef ORIENT_FN_FIXED_FOR_XZ_AND_YZ_CURVES
 #define ORIENT_FN_FIXED_FOR_XZ_AND_YZ_CURVES
+#ifdef ORIENT_FN_FIXED_FOR_XZ_AND_YZ_CURVES
       // For N FIXED segments start with a full twist (not a half twist).
       if (hose->fill > FIXED) {
 	angle = *total_twist * pi / 180; // Calculate angle after the twist.
@@ -679,8 +679,8 @@ render_hose(
     n_segments *= c;
     merge_segments_count(seglist,&n_segments,hose->fill,output);
     //printf("Merged segments to %d segments of len %d\n", n_segments, hose->mid.attrib);
-    orient(&first,&second,n_segments,seglist);
-    //orientq(&first,&second,n_segments,seglist); // With quaternions!
+    //orient(&first,&second,n_segments,seglist);
+    orientq(&first,&second,n_segments,seglist); // With quaternions!
     //printf("oriented %d\n",n_segments);
    
     render_hose_segment(
