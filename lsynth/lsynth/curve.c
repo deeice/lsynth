@@ -874,6 +874,7 @@ orientq(
     cur_length = hose_length(i,segments);
     cur_length /= total_length;
     angle = r * cur_length;
+    angle = -angle;  // Rotate the opposite way.
 
 #ifdef DEBUG_QUAT_MATH
     {
