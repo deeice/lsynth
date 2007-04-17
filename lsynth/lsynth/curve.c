@@ -816,19 +816,13 @@ orientq(
   start_up[0] = 0;
   start_up[1] = 0;
   start_up[2] = -1;
-#if 0
-  rotate_point(start_up,segments[n_segments-2].orient);
-  normalize(start_up); // Normalize again
-#else
   //matrixcp(m, segments[n_segments-2].orient);
   matrixcp(m, start->orient); // Reuse start->orient for 0 degree twist.
   vectorcp(t, start_up); // Should I reuse the previous t.  Did I save it?
   r = get_turn_mat(m, start->orient, start_v, end_v, t);
   rotate_point(start_up,m);
   normalize(start_up); // Normalize again
-#endif
 
-  // We seem to have a problem here.  Is it the -Y thing?
   // The rotated u[S] should match the U[E], unless there is some extra twist.
   // It doesn't match, so something is wrong.
 
@@ -866,6 +860,48 @@ orientq(
     // length to them.
   }
 #endif
+
+  // Ok now we have the extra up vector twist angle in r.
+  // Interpolate it over the length of the hose.
+  // I'm not sure this is quite right, but it goes from 0 to 100%.
+  // Probably ought to draw a pretty picture to be absolutely sure.
+  total_length = hose_length(n_segments-1,segments);
+  if (r != 0.0)
+   for (i = 1; i < n_segments; i++) {
+    PRECISION m1[3][3];
+    PRECISION angle;
+
+    cur_length = hose_length(i,segments);
+    cur_length /= total_length;
+    angle = r * cur_length;
+
+#ifdef DEBUG_QUAT_MATH
+    {
+    PRECISION pi = 2*atan2(1,0);
+    PRECISION degrees = 180.0 / pi;
+      
+    printf("TWIST[%d] at length %.2f of %.2f = %.2fdeg \n", 
+	   i, cur_length, total_length, angle*degrees);
+    }
+#endif
+
+    m1[0][0] = 1;
+    m1[0][1] = 0;
+    m1[0][2] = 0;
+    m1[1][0] = 0;
+    m1[1][1] = 1;
+    m1[1][2] = 0;
+    m1[2][0] = 0;
+    m1[2][1] = 0;
+    m1[2][2] = 1;
+
+    m1[0][0] =   cos(angle);
+    m1[0][2] =   sin(angle);
+    m1[2][0] =  -sin(angle);
+    m1[2][2] =   cos(angle);
+
+    matrixmult(segments[i-1].orient, m1);
+  }
 
 }
 
