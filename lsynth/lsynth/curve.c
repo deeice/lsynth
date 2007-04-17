@@ -560,6 +560,76 @@ PRECISION dotprod(PRECISION a[3], PRECISION b[3])
 }
 
 //**********************************************************************
+// Calculate the the turn matrix M, turn axis T, and return the turn angle r.
+// In case of emergency preload M and T with reasonable defaults.
+// 
+// NOTE: If I build each orient from previous instead of from start, 
+// then I don't need to pass in or use MS.  M is preloaded with previous M.
+// To do this I should pass previous v for a (instead of always using start_v).
+//**********************************************************************
+PRECISION get_turn_mat(PRECISION M[3][3], PRECISION MS[3][3], 
+		       PRECISION a[3], PRECISION b[3], PRECISION T[3])
+{
+  PRECISION m[3][3];
+  PRECISION q[4];
+  PRECISION t[3];
+  PRECISION r;
+
+    //Dot product gives turn angle.  a.b=|a||b|cos(theta)
+    //We normalized so |a|=|b|=1, which means theta = acos(a.b).
+    r = dotprod(b, a);
+    r = acos(r);
+
+    //Cross product gives turn axis.
+    mult_point(t, a, b);
+
+    // NOTE: gotta check cross product.  
+    // If magnitude is zero we have either a 180 or 0 degree turn.
+    // 
+    // Dot product can differentiate between 0 and 180 turn.
+    // Dot product of acute is negative (dot product of 180 = -1).
+    // Dot product of perpendicular is 0.
+    // Dot product of obtuse is positive (dot product of 0 = 1).
+    //
+    // If we get a 0 degree turn, just reuse previous orient matrix.
+    // If we get a 180 degree turn, reuse the previous turn axis.
+    // (Any axis in the perpendicular plane can make the 180, 
+    // but we want to maintain the up vector, so reuse the previous axis.)
+
+    // I think I can reasonably expect to avoid the 180 degree turns
+    // if we apply small incremental turns to the previous orient matrix
+    // instead of always applying the whole turn from the start matrix.
+    // But do we lose control of the up vector if we do that?
+
+    if (normalize(t) == 0)
+    {
+      if (dotprod(b, a) < 0)
+      {
+	printf("***  180 degree turn!!!\n");
+	// Just use the up vector (or previous t) which we preloaded into T.
+	vectorcp(t, T);
+      }
+      else 
+      {
+	printf("***  0 degree turn!!!\n");
+	// Just reuse the previous orient, which we preloaded into M.
+	return r;
+      }
+    }
+
+    // Convert to a quaternion, and convert that to a rotation matrix.
+    axisangle2quat(t, r, q);
+    normalizequat( q );
+    quat2matrix(q, m);
+
+    // Then combine the rotation from that matrix with the start orient.
+    matrixmult3(M,m,MS);
+
+    vectorcp(T, t);
+    return r;
+}
+
+//**********************************************************************
 // Convert start, end constraints and n points to oriented segments
 // using quaternion.
 //**********************************************************************
@@ -658,56 +728,20 @@ orientq(
     v[2] = segments[i+1].offset[2] - segments[i].offset[2];
     normalize(v);
 
-    //Dot product gives turn angle.  a.b=|a||b|cos(theta)
-    //We normalized so |a|=|b|=1, which means theta = acos(a.b).
-    r = dotprod(v, start_v);
-    r = acos(r);
-
-    //Cross product gives turn axis.
-    mult_point(t, start_v, v);
-    if (normalize(t) == 0)
+    // Preload segments[i].orient with previous orient in case of 0 degree turn.
+    // Preload turn axis t with previous t (or up) in case of 180 degree turn.
+    if (i)
     {
-      if (dotprod(v, start_v) < 0)
-      {
-	printf("***  180 degree turn!!!\n");
-	vectorcp(t, start_up);
-      }
-      else 
-      {
-	printf("***  0 degree turn!!!\n");
-	if (i)
-	  matrixcp(segments[i].orient, segments[i-1].orient);
-	else 
-	  matrixcp(segments[i].orient, start->orient);
-	continue;
-      }
+      matrixcp(segments[i].orient, segments[i-1].orient);
+      vectorcp(t, start_up); // Should reuse the previous t.  Did I save it?
+    }
+    else 
+    {
+      matrixcp(segments[i].orient, start->orient);
+      vectorcp(t, start_up); // Default t to the up vector
     }
 
-    // NOTE: gotta check cross product.  
-    // If magnitude is zero we have either a 180 or 0 degree turn.
-    // 
-    // Dot product can differentiate between 0 and 180 turn.
-    // Dot product of acute is negative (dot product of 180 = -1).
-    // Dot product of perpendicular is 0.
-    // Dot product of obtuse is positive (dot product of 0 = 1).
-    //
-    // If we get a 0 degree turn, just reuse previous orient matrix.
-    // If we get a 180 degree turn, reuse the previous turn axis.
-    // (Any axis in the perpendicular plane can make the 180, 
-    // but we want to maintain the up vector, so reuse the previous axis.)
-
-    // I think I can reasonably expect to avoid the 180 degree turns
-    // if we apply small incremental turns to the previous orient matrix
-    // instead of always applying the whole turn from the start matrix.
-    // But do we lose control of the up vector if we do that?
-
-    // Convert to a quaternion, and convert that to a rotation matrix.
-    axisangle2quat(t, r, q);
-    normalizequat( q );
-    quat2matrix(q, m);
-
-    // Then multiply the rotation from that matrix to the start orientation.
-    matrixmult3(segments[i].orient,m,start->orient);
+    r = get_turn_mat(segments[i].orient, start->orient, start_v, v, t);
 
 #ifdef DEBUG_QUAT_MATH
   {
@@ -762,10 +796,36 @@ orientq(
 
 #ifdef DEBUG_QUAT_MATH
   printf("U[S] = (%.2fx, %.2fy, %.2fz)\n", start_up[0],start_up[1],start_up[2]);
+  i = n_segments-2;
+  printf("M[%d] = (%.2f, %.2f, %.2f,   %.2f, %.2f, %.2f,   %.2f, %.2f, %.2f)\n",
+	   i,
+	 segments[i].orient[0][0],
+	 segments[i].orient[0][1],
+	 segments[i].orient[0][2],
+	 segments[i].orient[1][0],
+	 segments[i].orient[1][1],
+	 segments[i].orient[1][2],
+	 segments[i].orient[2][0],
+	 segments[i].orient[2][1],
+	 segments[i].orient[2][2]);
 #endif
 
+  // I know.  I can't use segments[n-2].orient because that includes
+  // the rotation in start->orient.  If I want to use that I have to
+  // pass it the unmodified -Z up vector.  Not the rotated start_up.
+  start_up[0] = 0;
+  start_up[1] = 0;
+  start_up[2] = -1;
+#if 0
   rotate_point(start_up,segments[n_segments-2].orient);
   normalize(start_up); // Normalize again
+#else
+  matrixcp(m, segments[n_segments-2].orient);
+  vectorcp(t, start_up); // Should reuse the previous t.  Did I save it?
+  r = get_turn_mat(m, start->orient, start_v, end_v, t);
+  rotate_point(start_up,m);
+  normalize(start_up); // Normalize again
+#endif
 
   // We seem to have a problem here.  Is it the -Y thing?
   // The rotated u[S] should match the U[E], unless there is some extra twist.
@@ -786,7 +846,23 @@ orientq(
     PRECISION pi = 2*atan2(1,0);
     PRECISION degrees = 180.0 / pi;
       
-    printf("  ExtraTwist = %.2fdeg\n", r*degrees);
+    //Cross product gives turn axis.
+    mult_point(t, start_up, end_up);
+    normalize(t);
+
+    printf("u[E] = (%.2fx, %.2fy, %.2fz) TWIST = %.2fdeg (%.2f, %.2f, %.2f)\n",
+	   start_up[0],start_up[1],start_up[2], r*degrees, t[0],t[1],t[2]);
+
+    // I'm still getting a small TURN around the side axis (-X) 
+    // that must be eliminated before we can isolate the extra TWIST.
+    // Probably the difference between the last segment we calculated
+    // using the bezier curve() fn and the orient of the end constraint.
+    // Can we force the bezier fn to make the start and end segments
+    // match the orient of the start and end constraints.  The original
+    // code just replaces the orient of the first and last segments.
+    // That's OK for very short segments, but could give a rather sharp
+    // Turn for the 2nd and 2nd to last segments if they have any 
+    // length to them.
   }
 #endif
 
