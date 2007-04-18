@@ -605,13 +605,17 @@ PRECISION get_turn_mat(PRECISION M[3][3], PRECISION MS[3][3],
     {
       if (dotprod(b, a) < 0)
       {
+#ifdef DEBUG_QUAT_MATH
 	printf("***  180 degree turn!!!\n");
+#endif
 	// Just use the up vector (or previous t) which we preloaded into T.
 	vectorcp(t, T);
       }
       else 
       {
+#ifdef DEBUG_QUAT_MATH
 	printf("***  0 degree turn!!!\n");
+#endif
 	// Just reuse the previous orient, which we preloaded into M.
 	return r;
       }
@@ -653,7 +657,7 @@ orientq(
 
   // Get the start and end velocity vectors.
   // The basic HoseSeg.dat files all extend the hose along the -Y axis.
-#if 1
+#if 0
   start_v[0] = end_v[0] = 0;
   start_v[1] = end_v[1] = -1; 
   start_v[2] = end_v[2] = 0;
@@ -670,6 +674,16 @@ orientq(
   // Run the original code and substitute a constraint to see if it flips Y.
   // Yes, they all point backwards.  
   // Why?  Is it just my LENGTH21 code in hose.c?  Or is it all hoses?
+  //
+  // Ah Ha! the hose parts actually grow in the +Y direction (ldraw down).
+  // The chain link is the oddball here, but we can slide it down 10 to match.
+  // So it's normal for the parts to point backwards?
+  // 
+  // I see both ends of the hose parts are now capped.  
+  // Is it really necessary to flip the end part if that's the case?
+  // The problem with the end of the brown hose is that you only get one part
+  // at the one end (after segment reduction)
+  // It's the start AND the end part, and the LAST end part.  What do you do with it?
 #endif
   rotate_point(start_v,start->orient);
   rotate_point(end_v,end->orient);
@@ -685,7 +699,6 @@ orientq(
   normalize(start_up); // Normalize again,
   normalize(end_up);   // Just in case orient includes a stretch.
 
-#define DEBUG_QUAT_MATH 1
 #ifdef DEBUG_QUAT_MATH
   {
     PRECISION pi = 2*atan2(1,0);

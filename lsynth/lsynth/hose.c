@@ -432,22 +432,38 @@ render_hose_segment(
     m1[0][1] = 0;
     m1[0][2] = 0;
     m1[1][0] = 0;
-    m1[1][1] = l;
+    m1[1][1] = l; // Stretch it by length of segment.
     m1[1][2] = 0;
     m1[2][0] = 0;
     m1[2][1] = 0;
     m1[2][2] = 1;
 
+    // Default offset is nothing.
+    offset[0] = 0; offset[1] = 0; offset[2] = 0;
+
     if (i == 0 && first) {
       type = hose->start.type;
+      vectorcp(offset,hose->start.offset);
       matrixmult3(m2,hose->start.orient,m1);
     } else if (i == n_segments-2 && last) {
       type = hose->end.type;
+#if 0
+      // This looks wrong.  
+      // First, the segment length offset was getting overwritten below.
+      // But how do we know to negate the length?  
+      // Does that imply we expect the end orient to flip it?  It might not.
       offset[0] = 0; offset[1] = -l; offset[2] = 0;
       vectorrot(offset,segments[i].orient);
+#else
+      // The -1 gets scaled (by segment length l) and rotated later,
+      // but how do we know to use the negative?
+      //offset[0] = 0; offset[1] = -1; offset[2] = 0;
+      vectorcp(offset,hose->end.offset);
+#endif
       matrixmult3(m2,hose->end.orient,m1);
     } else {
       type = hose->mid.type;
+      vectorcp(offset,hose->mid.offset);
       matrixmult3(m2,hose->mid.orient,m1);
     }
 
@@ -499,8 +515,13 @@ render_hose_segment(
     //       with the hose->(start,mid,end).offset.
     // I really think we need to use this to fix the minifig chain link, the 
     // origin of which is not centered.  Instead its ~4Y over toward one end.
+#if 0
     offset[0] = 0; offset[1] = 0; offset[2] = 0;
     vectoradd(offset,hose->mid.offset); // Should also consider first and last.
+#else
+    // Get offset (first, mid, or last) from lsynth.mpd file above.
+    // That way it matches the first, mid, or last orient from lsynth.mpd.
+#endif
     vectorrot(offset,m2);
     vectoradd(segments[i].offset,offset);
 
@@ -630,6 +651,7 @@ render_hose(
       // move normalized result back into its original orientation and position
       mid_constraint = constraints[c+1];
       orient(&first,&second,n_segments,segments);
+      //orientq(&first,&second,n_segments,segments); // With quaternions!
     }
     else if (hose->fill == FIXED) {
       merge_segments_length(segments,&n_segments,hose->mid.attrib,output);
