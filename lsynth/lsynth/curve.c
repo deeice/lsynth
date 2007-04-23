@@ -8,7 +8,8 @@
 #include "curve.h"
 #include "mathlib.h"
 
-static void
+// Find the cross product.  Also return the magnitude for error checking.
+static PRECISION
 mult_point(PRECISION r[3], PRECISION lhs[3], PRECISION rhs[3])
 {
   PRECISION tt;
@@ -27,6 +28,7 @@ mult_point(PRECISION r[3], PRECISION lhs[3], PRECISION rhs[3])
     r[1] /= tt;
     r[2] /= tt;
   }
+  return tt;
 }
 
 static void
@@ -122,6 +124,8 @@ PRECISION hose_length(
   return length;
 }
 
+PRECISION dotprod(PRECISION a[3], PRECISION b[3]);
+
 void
 orient(
   part_t       *start,
@@ -134,16 +138,29 @@ orient(
   PRECISION cur_length;
   int i;
 
-  start_up[0] = 1;
-  start_up[1] = 0;
-  start_up[2] = 0;
+  // The up vector of the constraint is along -Z so let's use that instead of +X.
+  // This way the resulting spin is predictable based on orient of the constraint.
+  start_up[0] = end_up[0] = 0;
+  start_up[1] = end_up[1] = 0;
+  start_up[2] = end_up[2] = -1;
   rotate_point(start_up,start->orient);
-
-  end_up[0] = 1;
-  end_up[1] = 0;
-  end_up[2] = 0;
   rotate_point(end_up,end->orient);
 
+#ifdef DEBUG_ORIENT_MATH
+  // If the magnitude of the cross product is 0 then SE is colinear.
+  // Check dot product for direction.  Negative dot product means 180.
+  // Positive dot product means 0 degree turn, skip up interpolation. 
+  // If 180, we need to spin the up vector, not linearly interpolate.
+  // Because linear interpolation gives a zero magnitude up vector
+  // at the halfway point between start and end.
+  if (mult_point(up,start_up,end_up) == 0.0) 
+    printf("Start_up X end = 0\n");
+  else
+    printf("Start_up X end = good\n");
+  cur_length = dotprod(start_up, end_up);
+  printf("dotprod(S,E) = %.2f\n", cur_length);
+#endif
+  
   /* Up vector controls the twist
    *
    * Interpolate the up vector based on start up vector, and
@@ -165,6 +182,10 @@ orient(
     up[2] = start_up[2]*(1-cur_length) + end_up[2]*cur_length;
 
     r = sqrt(up[0]*up[0] + up[1]*up[1] + up[2]*up[2]);
+#ifdef DEBUG_ORIENT_MATH
+    printf("UP length = %.3f\n", r);
+#endif
+
     up[0] /= r;
     up[1] /= r;
     up[2] /= r;
@@ -179,8 +200,15 @@ orient(
     front[1] /= r;
     front[2] /= r;
 
+#ifdef DEBUG_ORIENT_MATH
+    r = mult_point(t,front,up); // side
+    printf("side axis = %.2f\n", r);
+    r = mult_point(up,t,front); // side * front
+    printf("up axis = %.2f\n", r);
+#else
     mult_point(t,front,up); // side
     mult_point(up,t,front); // side * front
+#endif
 
     make_rotation_pp(segments[i].orient,up,front);
   }
