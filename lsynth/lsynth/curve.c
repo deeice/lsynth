@@ -232,6 +232,7 @@ synth_curve(
   PRECISION ptp_sum;
   int i,j,n;
 
+#if 0
   vector[0] = 0;
   vector[1] = attrib;
   vector[2] = 0;
@@ -259,6 +260,34 @@ synth_curve(
   }
 
   // stop_speed_v[2] = -stop_speed_v[2];
+#else
+  start_speed_v[0] = stop_speed_v[0] = 0;
+  start_speed_v[1] = attrib;
+  stop_speed_v[1] = -attrib;
+  start_speed_v[2] = stop_speed_v[2] = 0;
+  rotate_point(start_speed_v,start->orient);
+  rotate_point(stop_speed_v,end->orient);
+
+  // Limit the stiffness factor to the distance between start and end 
+  // constraints to avoid the curve doubling back upon itself.
+  // NOTE: This should only be done if the constraints point in the same
+  // general direction.  ie.  dotproduct > 0.  
+  // (Use dotprod < 0 because -attrib reverses the direction of stop_speed.)
+  vector[0] = end->offset[0] - start->offset[0];
+  vector[1] = end->offset[1] - start->offset[1];
+  vector[2] = end->offset[2] - start->offset[2];
+  x = sqrt(vector[0]*vector[0] + vector[1]*vector[1] + vector[2]*vector[2]);
+  if ((x < attrib) && (dotprod(start_speed_v, stop_speed_v) < 0.0))
+  {  
+    attrib = x;
+    start_speed_v[0] = stop_speed_v[0] = 0;
+    start_speed_v[1] = attrib;
+    stop_speed_v[1] = -attrib;
+    start_speed_v[2] = stop_speed_v[2] = 0;
+    rotate_point(start_speed_v,start->orient);
+    rotate_point(stop_speed_v,end->orient);
+  }
+#endif
 
   for (i = 0; i < n_segments; i++) {
     time  = (PRECISION) i/ (PRECISION) n_segments;
