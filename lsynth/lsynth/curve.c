@@ -273,13 +273,14 @@ synth_curve(
   // NOTE: This should only be done if the constraints point in the same
   // general direction.  ie.  dotproduct > 0.  
   // (Use dotprod < 0 because -attrib reverses the direction of stop_speed.)
-  vector[0] = end->offset[0] - start->offset[0];
-  vector[1] = end->offset[1] - start->offset[1];
-  vector[2] = end->offset[2] - start->offset[2];
-  x = sqrt(vector[0]*vector[0] + vector[1]*vector[1] + vector[2]*vector[2]);
-  if ((x < attrib) && (dotprod(start_speed_v, stop_speed_v) < 0.0))
+  vectorsub3(vector, end->offset, start->offset);
+  x = vectorlen(vector);
+  y = dotprod(start_speed_v, stop_speed_v);
+  //printf("attrib = %.3f, dist = %.3f, dotprod = %.3f\n)",attrib, x, y);
+  if ((x < attrib*2) && (y <= 0.001))
   {  
-    attrib = x;
+    attrib = x/2.0;
+    //printf("newattrib = %.3f, dist = %.3f, dotprod = %.3f\n)",attrib, x, y);
     start_speed_v[0] = stop_speed_v[0] = 0;
     start_speed_v[1] = attrib;
     stop_speed_v[1] = -attrib;
