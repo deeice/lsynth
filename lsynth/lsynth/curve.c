@@ -794,8 +794,7 @@ orientq(
     // (Get turn from seg[i-1] to seg[i] instead of from start to seg[i].)
     r = get_turn_mat(segments[i].orient, start_v, v, t);
 
-//#ifdef DEBUG_QUAT_MATH
-#if 1
+#ifdef DEBUG_QUAT_MATH
     if (i == 0)
     {
       printf(" U[S] = (%.2fx, %.2fy, %.2fz)", start_up[0],start_up[1],start_up[2]);
@@ -813,8 +812,7 @@ orientq(
     // Use incremental turns.  Pass v[i-1] instead of using start_v.
     vectorcp(start_v, v); 
 
-//#ifdef DEBUG_QUAT_MATH
-#if 1
+#ifdef DEBUG_QUAT_MATH
     // Interpolate Up based on length from Start to Segment[i].  (For debug only.)
     cur_length = hose_length(i,segments);
     cur_length /= total_length;
@@ -900,8 +898,7 @@ orientq(
 #endif
 
   // The rotated u[S] should match the U[E], unless there is some extra twist.
-//#ifdef DEBUG_QUAT_MATH
-#if 1
+#ifdef DEBUG_QUAT_MATH
   printf("  U[S] = (%.2fx, %.2fy, %.2fz)\n", start_up[0],start_up[1],start_up[2]);
   printf("  U[P] = (%.2fx, %.2fy, %.2fz)\n", up[0],up[1],up[2]);
   printf("  U[E] = (%.2fx, %.2fy, %.2fz)\n", end_up[0],end_up[1],end_up[2]);
@@ -921,8 +918,7 @@ orientq(
   if (a > 0.0)
     r = -r;  // Rotate the opposite way.
 
-//#ifdef DEBUG_QUAT_MATH
-#if 1
+#ifdef DEBUG_QUAT_MATH
   printf("%.2f degree TWIST about (%.2f, %.2f, %.2f)\n\n",
 	 r*degrees, t[0],t[1],t[2]);
 
@@ -974,8 +970,7 @@ orientq(
     m[2][0] =  -sin(angle);
     m[2][2] =   cos(angle);
 
-//#ifdef PERFORM_THE_ACTUAL_TWIST
-#if 1
+#ifdef PERFORM_THE_ACTUAL_TWIST
     if (r != 0.0)
       matrixmult(segments[i-1].orient, m);
 #endif
