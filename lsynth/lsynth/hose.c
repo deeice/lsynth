@@ -632,7 +632,10 @@ render_hose(
 
     // create an oversampled curve
 
-    synth_curve(&first,&second,segments,n_segments,hose->stiffness,output);
+    if (hose->fill == FIXED) 
+      synth_curve(&first,&second,segments,n_segments-1,hose->stiffness,output);
+    else
+      synth_curve(&first,&second,segments,n_segments,hose->stiffness,output);
 
     // reduce oversampled curve to fixed length chunks, or segments limit
     // by angular resolution
@@ -650,9 +653,10 @@ render_hose(
       vectorcp(segments[n_segments-1].offset,second.offset);
       // move normalized result back into its original orientation and position
       mid_constraint = constraints[c+1];
-      orient(&first,&second,n_segments,segments);
-      //orientq(&first,&second,n_segments,segments); // With quaternions!
+      //orient(&first,&second,n_segments,segments);
+      orientq(&first,&second,n_segments,segments); // With quaternions!
     }
+#if 0
     else if (hose->fill == FIXED) {
       merge_segments_length(segments,&n_segments,hose->mid.attrib,output);
       // Make sure final segment matches second constraint
@@ -661,7 +665,38 @@ render_hose(
       mid_constraint = constraints[c+1];
       vectorcp(mid_constraint.offset,segments[n_segments-2].offset);
       orient(&first,&second,n_segments,segments);
+      //orientq(&first,&second,n_segments,segments);
     }
+#else
+    else if (hose->fill == FIXED) {
+      // Make sure final segment point matches second constraint
+      vectorcp(segments[n_segments-1].offset,second.offset);
+#ifdef ADJUST_FINAL_FIXED_HOSE_END
+      // Hmmm, how do we make a hose comprised of fixed length parts
+      // reach exactly to the end constraint?
+      // This is OK for ribbed hoses 
+      // but not for string or chain, so we probably shouldn't do it.
+      if (c == n_constraints-2) 
+      {
+	int i = n_segments;
+	memcpy(seglist, segments, n_segments*sizeof(part_t));
+	// Set i to how many segments we need to get near to the end.
+	merge_segments_length(seglist,&i,hose->mid.attrib,output);
+	// Squish an extra part into the last segment to make it reach the end.
+	merge_segments_count(segments,&n_segments,i,output); // Yuck!
+	// Or, stretch the last part of the hose a bit to make it reach the end.
+	// merge_segments_count(segments,&n_segments,i-1,output); // Yuckier!
+      }
+      else
+#endif
+	merge_segments_length(segments,&n_segments,hose->mid.attrib,output);
+      // move normalized result back into its original orientation and position
+      mid_constraint = constraints[c+1];
+      vectorcp(mid_constraint.offset,segments[n_segments-1].offset);
+      orient(&first,&second,n_segments,segments);
+      //orientq(&first,&second,n_segments,segments);
+    }
+#endif
     else { // For N fixed size chunks just copy into one big list, merge later.
       // Make sure final segment matches second constraint
       vectorcp(segments[n_segments-1].offset,second.offset);

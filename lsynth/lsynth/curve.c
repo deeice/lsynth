@@ -620,13 +620,9 @@ PRECISION dotprod(PRECISION a[3], PRECISION b[3])
 //**********************************************************************
 // Calculate the the turn matrix M, turn axis T, and return the turn angle r.
 // In case of emergency preload M and T with reasonable defaults.
-// 
-// NOTE: If I build each orient from previous instead of from start, 
-// then I don't need to pass in or use MS.  M is preloaded with previous M.
-// To do this I should pass previous v for a (instead of always using start_v).
+// M is preloaded with previous M.
 //**********************************************************************
-PRECISION get_turn_mat(PRECISION M[3][3], PRECISION MS[3][3], 
-		       PRECISION a[3], PRECISION b[3], PRECISION T[3])
+PRECISION get_turn_mat(PRECISION M[3][3],PRECISION a[3],PRECISION b[3],PRECISION T[3])
 {
   PRECISION m[3][3];
   PRECISION q[4];
@@ -684,9 +680,10 @@ PRECISION get_turn_mat(PRECISION M[3][3], PRECISION MS[3][3],
     normalizequat( q );
     quat2matrix(q, m);
 
-    // Then combine the rotation from that matrix with the start orient.
-    matrixmult3(M,m,MS);
+    matrixmult(m, M); // Combine rotation m with previous rotation M.
 
+    // Move temp vars into return values.
+    matrixcp(M,m);
     vectorcp(T, t);
     return r;
 }
@@ -708,47 +705,42 @@ orientq(
   PRECISION m[3][3];
   PRECISION total_length = hose_length(n_segments,segments);
   PRECISION cur_length;
-  PRECISION r;
+  PRECISION r, a;
   PRECISION front[3];
   PRECISION t[3];
   int i;
 
+//#ifdef DEBUG_QUAT_MATH
+  PRECISION pi = 2*atan2(1,0);
+  PRECISION degrees = 180.0 / pi;
+//#endif      
+
   // Get the start and end velocity vectors.
-  // The basic HoseSeg.dat files all extend the hose along the -Y axis.
-#if 0
+  // The basic HoseSeg.dat files extend the hose along the +Y axis.
   start_v[0] = end_v[0] = 0;
-  start_v[1] = end_v[1] = -1; 
+  start_v[1] = end_v[1] = 1; // Use positive Y like hose part.  
+  start_v[1] = end_v[1] = -1; // Use negative Y like constraint part.  
   start_v[2] = end_v[2] = 0;
-#else
-  start_v[0] = end_v[0] = 0;
-  start_v[1] = end_v[1] = 1; // Try positive Y.  Maybe it'll fix offset.
-  start_v[2] = end_v[2] = 0;
-  // It does fix it.  Why?  Does some other matrix flip Y in hose.c?
-  // Or is it just that I no longer need the 10 offset in lsynth.mpd?
-  //
-  // I substituted a constraint for one of the chain links and it points
-  // backwards with this code.  So I want -Y and fix the lsynth.mpd offset.
-  //
-  // Run the original code and substitute a constraint to see if it flips Y.
-  // Yes, they all point backwards.  
-  // Why?  Is it just my LENGTH21 code in hose.c?  Or is it all hoses?
-  //
-  // Ah Ha! the hose parts actually grow in the +Y direction (ldraw down).
+  // The hose parts actually grow in the +Y direction (ldraw down).
   // The chain link is the oddball here, but we can slide it down 10 to match.
-  // So it's normal for the parts to point backwards?
+  // So it's normal for the parts to point backwards?  Test this again.
   // 
-  // I see both ends of the hose parts are now capped.  
-  // Is it really necessary to flip the end part if that's the case?
+  // I see both ends of some hose parts are now capped, but not the ribbed hose.
+  // So it really is necessary to flip the end part, sometimes.
+  // But do it in lsynth.mpd.
+  //
   // The problem with the end of the brown hose is that you only get one part
   // at the one end (after segment reduction)
   // It's the start AND the end part, and the LAST end part.  What do you do with it?
-#endif
+
+  //****** Get velocity vectors from the Start and End constraints.
   rotate_point(start_v,start->orient);
   rotate_point(end_v,end->orient);
   normalize(start_v); // Normalize again,
   normalize(end_v);   // Just in case orient includes a stretch.
 
-  // Get the up vectors.  The fin on LS00.dat is along -Z so rotate that.
+  //****** Get the up vectors from the Start and End constraints.  
+  // The fin on LS00.dat is along -Z so rotate that.
   start_up[0] = end_up[0] = 0;
   start_up[1] = end_up[1] = 0;
   start_up[2] = end_up[2] = -1;
@@ -758,10 +750,6 @@ orientq(
   normalize(end_up);   // Just in case orient includes a stretch.
 
 #ifdef DEBUG_QUAT_MATH
-  {
-    PRECISION pi = 2*atan2(1,0);
-    PRECISION degrees = 180.0 / pi;
-      
     printf("V[S] = (%.2fx, %.2fy, %.2fz)\n", start_v[0],start_v[1],start_v[2]);
     printf("M[S] = (%.2f, %.2f, %.2f,   %.2f, %.2f, %.2f,   %.2f, %.2f, %.2f)\n",
 	 start->orient[0][0],
@@ -773,27 +761,15 @@ orientq(
 	 start->orient[2][0],
 	 start->orient[2][1],
 	 start->orient[2][2]);
-  }
 #endif
 
-  /* Up vector controls the twist
-   *
-   * Interpolate the up vector based on start up vector, and
-   * end up vector, and how far we are down the hose's total
-   * length
-   */
-
+  /* Calculate turn axis (t) and angle (r) for each segment.
+   * Use this to calculate an orient matrix for each segment.
+   * Preload last good vals for special cases like 0 and 180 degree turns.
+   ********************************************/
   for (i = 0; i < n_segments-1; i++) {
 
-    cur_length = hose_length(i,segments);
-
-    cur_length /= total_length;
-
-    up[0] = start_up[0]*(1-cur_length) + end_up[0]*cur_length;
-    up[1] = start_up[1]*(1-cur_length) + end_up[1]*cur_length;
-    up[2] = start_up[2]*(1-cur_length) + end_up[2]*cur_length;
-    normalize(up);
-
+    // Get the Velocity vector for Segment[i].
     v[0] = segments[i+1].offset[0] - segments[i].offset[0];
     v[1] = segments[i+1].offset[1] - segments[i].offset[1];
     v[2] = segments[i+1].offset[2] - segments[i].offset[2];
@@ -804,23 +780,51 @@ orientq(
     if (i)
     {
       matrixcp(segments[i].orient, segments[i-1].orient);
-      vectorcp(t, start_up); // Should reuse the previous t.  Did I save it?
+      // Reuse the previous t.
     }
     else 
     {
       matrixcp(segments[i].orient, start->orient);
-      vectorcp(t, start_up); // Default t to the up vector
+      vectorcp(t, start_up); // Default t to the up vector.
     }
 
-    r = get_turn_mat(segments[i].orient, start->orient, start_v, v, t);
+    // Get a turn matrix from Start velocity vector to the velocity of Segment[i].
+    // Pass in some preloaded matrices and such, for special cases like 0 or 180.
+    // NOTE: special cases are less likely if we calculate incremental turns.
+    // (Get turn from seg[i-1] to seg[i] instead of from start to seg[i].)
+    r = get_turn_mat(segments[i].orient, start_v, v, t);
 
-#ifdef DEBUG_QUAT_MATH
-  {
-    PRECISION pi = 2*atan2(1,0);
-    PRECISION degrees = 180.0 / pi;
+//#ifdef DEBUG_QUAT_MATH
+#if 1
+    if (i == 0)
+    {
+      printf(" U[S] = (%.2fx, %.2fy, %.2fz)", start_up[0],start_up[1],start_up[2]);
+      printf("  V[S] = (%.2fx, %.2fy, %.2fz)\n", start_v[0],start_v[1],start_v[2]);
+    }
+    up[0] = 0;
+    up[1] = 0;
+    up[2] = -1;
+    rotate_point(up,segments[i].orient);
+    normalize(up); // Normalize again
+    printf("  u[%d] = (%.2fx, %.2fy, %.2fz)", i, up[0],up[1],up[2]);
+    printf("  V[%d] = (%.2fx, %.2fy, %.2fz)\n", i, v[0],v[1],v[2]);
+#endif
+
+    // Use incremental turns.  Pass v[i-1] instead of using start_v.
+    vectorcp(start_v, v); 
+
+//#ifdef DEBUG_QUAT_MATH
+#if 1
+    // Interpolate Up based on length from Start to Segment[i].  (For debug only.)
+    cur_length = hose_length(i,segments);
+    cur_length /= total_length;
+    up[0] = start_up[0]*(1-cur_length) + end_up[0]*cur_length;
+    up[1] = start_up[1]*(1-cur_length) + end_up[1]*cur_length;
+    up[2] = start_up[2]*(1-cur_length) + end_up[2]*cur_length;
+    normalize(up);
       
-    printf("V[%d] = (%.2fx, %.2fy, %.2fz) TURN = %.2fdeg (%.2f, %.2f, %.2f)\n",
-	   i, v[0],v[1],v[2], r*degrees, t[0],t[1],t[2]);
+    printf("\t %.2f degree TURN about (%.2f, %.2f, %.2f)\n",
+	   r*degrees, t[0],t[1],t[2]);
 #if 0
     printf("M[%d] = (%.2f, %.2f, %.2f,   %.2f, %.2f, %.2f,   %.2f, %.2f, %.2f)\n",
 	   i,
@@ -834,18 +838,13 @@ orientq(
 	 segments[i].orient[2][1],
 	 segments[i].orient[2][2]);
 #endif
-  }
 #endif
 
-  }
+  } // Segments[i].orient should now contain rotation matrices.
 
 #ifdef DEBUG_QUAT_MATH
-  {
-    PRECISION pi = 2*atan2(1,0);
-    PRECISION degrees = 180.0 / pi;
-      
-    printf("V[E] = (%.2fx, %.2fy, %.2fz)\n", end_v[0],end_v[1],end_v[2]);
-    printf("M[E] = (%.2f, %.2f, %.2f,   %.2f, %.2f, %.2f,   %.2f, %.2f, %.2f)\n",
+  printf("V[E] = (%.2fx, %.2fy, %.2fz)\n", end_v[0],end_v[1],end_v[2]);
+  printf("M[E] = (%.2f, %.2f, %.2f,   %.2f, %.2f, %.2f,   %.2f, %.2f, %.2f)\n",
 	 end->orient[0][0],
 	 end->orient[0][1],
 	 end->orient[0][2],
@@ -855,7 +854,6 @@ orientq(
 	 end->orient[2][0],
 	 end->orient[2][1],
 	 end->orient[2][2]);
-  }
 #endif
 
   // Now we should be able to add the spin
@@ -881,98 +879,144 @@ orientq(
 	 segments[i].orient[2][2]);
 #endif
 
+  //****** Get the Final rotation matrix m.  (Should be segments[n-1].orient).
+  matrixcp(m, segments[n_segments-2].orient);
+  // Reuse the previous t (and previous start_v).
+  r = get_turn_mat(m, start_v, end_v, t);
+
+  //****** Rotate up vector by Final rotation matrix to get basis for end twist.
   // I know.  I can't use segments[n-2].orient because that includes
   // the rotation in start->orient.  If I want to use that I have to
   // pass it the unmodified -Z up vector.  Not the rotated start_up.
-  start_up[0] = 0;
-  start_up[1] = 0;
-  start_up[2] = -1;
-  //matrixcp(m, segments[n_segments-2].orient);
-  matrixcp(m, start->orient); // Reuse start->orient for 0 degree twist.
-  vectorcp(t, start_up); // Should I reuse the previous t.  Did I save it?
-  r = get_turn_mat(m, start->orient, start_v, end_v, t);
-  rotate_point(start_up,m);
-  normalize(start_up); // Normalize again
+  up[0] = 0;
+  up[1] = 0;
+  up[2] = -1;
+  rotate_point(up,m);
+  normalize(up); // Normalize again
+
+#if 0
+  printf("ROTATE U[-z] %.2fdeg about (%.2f, %.2f, %.2f)\n",
+	 r*degrees, t[0],t[1],t[2]);
+#endif
 
   // The rotated u[S] should match the U[E], unless there is some extra twist.
-  // It doesn't match, so something is wrong.
-
-#ifdef DEBUG_QUAT_MATH
-  printf("u[S] = (%.2fx, %.2fy, %.2fz)\n", start_up[0],start_up[1],start_up[2]);
-  printf("U[E] = (%.2fx, %.2fy, %.2fz)\n", end_up[0],end_up[1],end_up[2]);
+//#ifdef DEBUG_QUAT_MATH
+#if 1
+  printf("  U[S] = (%.2fx, %.2fy, %.2fz)\n", start_up[0],start_up[1],start_up[2]);
+  printf("  U[P] = (%.2fx, %.2fy, %.2fz)\n", up[0],up[1],up[2]);
+  printf("  U[E] = (%.2fx, %.2fy, %.2fz)\n", end_up[0],end_up[1],end_up[2]);
 #endif
 
   //Dot product gives turn angle.  a.b=|a||b|cos(theta)
   //We normalized so |a|=|b|=1, which means theta = acos(a.b).
-  r = dotprod(start_up, end_up);
+  r = dotprod(up, end_up);
   r = acos(r);
 
-#ifdef DEBUG_QUAT_MATH
-  {
-    PRECISION pi = 2*atan2(1,0);
-    PRECISION degrees = 180.0 / pi;
-      
-    //Cross product gives turn axis.
-    mult_point(t, start_up, end_up);
-    normalize(t);
+  //Cross product gives turn axis.
+  mult_point(t, up, end_up);
+  normalize(t);
 
-    printf("u[E] = (%.2fx, %.2fy, %.2fz) TWIST = %.2fdeg (%.2f, %.2f, %.2f)\n",
-	   start_up[0],start_up[1],start_up[2], r*degrees, t[0],t[1],t[2]);
+  // Check sign of turn to see if it's left or right.
+  a = dotprod(t, end_v);
+  if (a > 0.0)
+    r = -r;  // Rotate the opposite way.
 
-    // I'm still getting a small TURN around the side axis (-X) 
-    // that must be eliminated before we can isolate the extra TWIST.
-    // Probably the difference between the last segment we calculated
-    // using the bezier curve() fn and the orient of the end constraint.
-    // Can we force the bezier fn to make the start and end segments
-    // match the orient of the start and end constraints.  The original
-    // code just replaces the orient of the first and last segments.
-    // That's OK for very short segments, but could give a rather sharp
-    // Turn for the 2nd and 2nd to last segments if they have any 
-    // length to them.
-  }
+//#ifdef DEBUG_QUAT_MATH
+#if 1
+  printf("%.2f degree TWIST about (%.2f, %.2f, %.2f)\n\n",
+	 r*degrees, t[0],t[1],t[2]);
+
+  //*****************************************************************
+  // Also, when I get everything else working, consider this...
+  // I'm still getting a small TURN around the side axis (-X) 
+  // that must be eliminated before we can isolate the extra TWIST.
+  // Probably the difference between the last segment we calculated
+  // using the bezier curve() fn and the orient of the end constraint.
+  // Can we force the bezier fn to make the start and end segments
+  // match the orient of the start and end constraints.  The original
+  // code just replaces the orient of the first and last segments.
+  // That's OK for very short segments, but could give a rather sharp
+  // Turn for the 2nd and 2nd to last segments if they have any 
+  // length to them.
 #endif
 
+  //*****************************************************************
   // Ok now we have the extra up vector twist angle in r.
   // Interpolate it over the length of the hose.
   // I'm not sure this is quite right, but it goes from 0 to 100%.
   // Probably ought to draw a pretty picture to be absolutely sure.
+  //*****************************************************************
   total_length = hose_length(n_segments-1,segments);
-  if (r != 0.0)
-   for (i = 1; i < n_segments; i++) {
-    PRECISION m1[3][3];
+  for (i = 1; i < n_segments; i++) {
     PRECISION angle;
 
     cur_length = hose_length(i,segments);
     cur_length /= total_length;
     angle = r * cur_length;
-    angle = -angle;  // Rotate the opposite way.
 
 #ifdef DEBUG_QUAT_MATH
-    {
-    PRECISION pi = 2*atan2(1,0);
-    PRECISION degrees = 180.0 / pi;
-      
     printf("TWIST[%d] at length %.2f of %.2f = %.2fdeg \n", 
 	   i, cur_length, total_length, angle*degrees);
-    }
 #endif
 
-    m1[0][0] = 1;
-    m1[0][1] = 0;
-    m1[0][2] = 0;
-    m1[1][0] = 0;
-    m1[1][1] = 1;
-    m1[1][2] = 0;
-    m1[2][0] = 0;
-    m1[2][1] = 0;
-    m1[2][2] = 1;
+    m[0][0] = 1;
+    m[0][1] = 0;
+    m[0][2] = 0;
+    m[1][0] = 0;
+    m[1][1] = 1;
+    m[1][2] = 0;
+    m[2][0] = 0;
+    m[2][1] = 0;
+    m[2][2] = 1;
 
-    m1[0][0] =   cos(angle);
-    m1[0][2] =   sin(angle);
-    m1[2][0] =  -sin(angle);
-    m1[2][2] =   cos(angle);
+    m[0][0] =   cos(angle);
+    m[0][2] =   sin(angle);
+    m[2][0] =  -sin(angle);
+    m[2][2] =   cos(angle);
 
-    matrixmult(segments[i-1].orient, m1);
+//#ifdef PERFORM_THE_ACTUAL_TWIST
+#if 1
+    if (r != 0.0)
+      matrixmult(segments[i-1].orient, m);
+#endif
+
+    //*****************************************************************
+    // Last but not least, make the hoses parts grow backwards.
+    //*****************************************************************
+    // The constraints point towards -Y (up in ldraw)
+    // But the hose segs point towards +Y (down in ldraw)
+    // I cannot mix and match the constraint orients with hose orients.
+    // I absolutely must figure out whether I want hose segs to point
+    // forwards or backwards, and then use that to do this.
+    // It'd be a whole lot easier for me if they all pointed forwards...
+    // To do that I'd make them point (or grow) toward -Y via lsynth.mpd.
+    // How does that affect the finished ends of the hose?  It shouldn't.
+    //*****************************************************************
+    m[0][0] = 1;
+    m[0][1] = 0;
+    m[0][2] = 0;
+    m[1][0] = 0;
+    m[1][1] = -1; // Flip the Y coord.
+    m[1][2] = 0;
+    m[2][0] = 0;
+    m[2][1] = 0;
+    m[2][2] = 1;
+    matrixmult(segments[i-1].orient, m);
+  }
+
+  // We still have to flip the Y, even if only one segment.
+  if (n_segments == 1)
+  {
+    m[0][0] = 1;
+    m[0][1] = 0;
+    m[0][2] = 0;
+    m[1][0] = 0;
+    m[1][1] = -1; // Flip the Y coord.
+    m[1][2] = 0;
+    m[2][0] = 0;
+    m[2][1] = 0;
+    m[2][2] = 1;
+    matrixmult(segments[0].orient, m);
   }
 
 }

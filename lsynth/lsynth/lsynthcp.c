@@ -943,7 +943,7 @@ int main(int argc, char* argv[])
     exit(0);
   }
 
-  printf("LSynth version 3.0 by Kevin Clague, kevin_clague@yahoo.com\n");
+  printf("LSynth version 3.0 beta F by Kevin Clague, kevin_clague@yahoo.com\n");
   printf("                   and Don Heyse\n");
 
   if (argc == 2 && strcasecmp(argv[1],"-v") == 0) {
