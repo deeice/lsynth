@@ -944,36 +944,36 @@ orientq(
   //*****************************************************************
   total_length = hose_length(n_segments-1,segments);
   for (i = 1; i < n_segments; i++) {
-    PRECISION angle;
 
-    cur_length = hose_length(i,segments);
-    cur_length /= total_length;
-    angle = r * cur_length;
+    // Interpolate the twist (if there is any) over the length of segment.
+    if (r != 0.0)
+    {
+      cur_length = hose_length(i,segments);
+      cur_length /= total_length;
+      a = r * cur_length;
 
 #ifdef DEBUG_QUAT_MATH
-    printf("TWIST[%d] at length %.2f of %.2f = %.2fdeg \n", 
-	   i, cur_length, total_length, angle*degrees);
+      printf("TWIST[%d] at length %.2f of %.2f = %.2fdeg \n", 
+	     i, cur_length, total_length, a*degrees);
 #endif
 
-    m[0][0] = 1;
-    m[0][1] = 0;
-    m[0][2] = 0;
-    m[1][0] = 0;
-    m[1][1] = 1;
-    m[1][2] = 0;
-    m[2][0] = 0;
-    m[2][1] = 0;
-    m[2][2] = 1;
+      m[0][0] = 1;
+      m[0][1] = 0;
+      m[0][2] = 0;
+      m[1][0] = 0;
+      m[1][1] = 1;
+      m[1][2] = 0;
+      m[2][0] = 0;
+      m[2][1] = 0;
+      m[2][2] = 1;
 
-    m[0][0] =   cos(angle);
-    m[0][2] =   sin(angle);
-    m[2][0] =  -sin(angle);
-    m[2][2] =   cos(angle);
+      m[0][0] =   cos(a);
+      m[0][2] =   sin(a);
+      m[2][0] =  -sin(a);
+      m[2][2] =   cos(a);
 
-#ifdef PERFORM_THE_ACTUAL_TWIST
-    if (r != 0.0)
       matrixmult(segments[i-1].orient, m);
-#endif
+    }
 
     //*****************************************************************
     // Last but not least, make the hoses parts grow backwards.
