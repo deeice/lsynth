@@ -3,14 +3,15 @@
 0 Name: LSynth.mpd
 0 Kevin L. Clague
 0 Unofficial Model
-0
-0 !HISTORY [Willy Tschager] Streamlined stiffness in various definitions, added hose constraints
-0 // 2007-03-28  DMH      Minifig Chain updates.
-0 // 2007-04-17  DMH      Added offset -1Y to PNEUMATIC_HOSE, FLEX_SYSTEM_HOSE
-0 //                      end_parts.  Added -1Y to RUBBER_HOSE start_part.
-0
+0 
+0 !HISTORY 2007-03-28 [Willy Tschager] Streamlined stiffness in various definitions, added hose constraints
+0 !HISTORY 2007-03-28 [Don M. Heyse]   Minifig Chain updates.
+0 !HISTORY 2007-04-17 [Don M. Heyse]   Added offset -1Y to PNEUMATIC_HOSE, FLEX_SYSTEM_HOSE end_parts. Added -1Y to RUBBER_HOSE start_part.
+0 !HISTORY 2007-03-28 [Willy Tschager] Tweaked MINIFIG_CHAIN offset. Corrected FIBER_OPTIC_CABLE diameter and end piece. Added comments.
+0 !HISTORY 2007-05-08 [DMH]   Shrink FIBER_OPTIC end part.  Tweaked RUBBER and RIBBED hose offsets.
+0 
 0 // These are the complete parts that LSynth knows about.
-0
+0 
 0 SYNTH PART 4297187.dat NXT_CABLE_20CM   NXT_ELECTRIC_CABLE
 0 SYNTH PART 4297188.dat NXT_CABLE_35CM   NXT_ELECTRIC_CABLE
 0 SYNTH PART 4297185.dat NXT_CABLE_50CM   NXT_ELECTRIC_CABLE
@@ -168,11 +169,14 @@
 0 SYNTH BEGIN DEFINE HOSE CONSTRAINTS
 0 ROTATION CENTER 0 0 0 1 "Custom" 
 0 ROTATION CONFIG 0 0
+0 // LSynth Hose Constraint Part - Type 1
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS00.DAT
+0 // LSynth Hose Constraint Part - Type 2
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS01.DAT
+0 // LSynth Hose Constraint Part - Type 3
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS02.DAT
 0 SYNTH END
-0
+0 
 0
 0 FILE BAND_CONSTRAINTS.ldr
 0 LSYNTH BAND CONSTRAINTS LIST
@@ -209,18 +213,21 @@
 1 71 0 0 -20 1 0 0 0 0 1 0 -1 0 48451.dat
 1 71 0 0 9 1 0 0 0 0 1 0 -1 0 2855.DAT
 0 SYNTH END
-0
+0 
 0
 0 FILE RCX_ELECTRIC_CABLE.ldr
 0 RCX ELECTRIC_CABLE SYNTHESIS DEFINITION
 0 Name: RCX_ELECTRIC_CABLE.ldr
 0 Author: Kevin L. Clague
 0 Unofficial Model
-0 SYNTH BEGIN DEFINE RCX_ELECTRIC_CABLE HOSE STRETCH 9 20 0
+0 SYNTH BEGIN DEFINE RCX_ELECTRIC_CABLE HOSE STRETCH 9 30 0
 0 ROTATION CENTER 0 0 0 1 "Custom" 
 0 ROTATION CONFIG 0 0
+0 // LSynth Electric Cable Segment
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 S\LS10.DAT
+0 // LSynth Electric Cable Segment
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 S\LS10.DAT
+0 // LSynth Electric Cable Segment
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 S\LS10.DAT
 0 SYNTH END
 0 
@@ -247,9 +254,10 @@
 0 SYNTH BEGIN DEFINE FIBER_OPTIC_CABLE HOSE STRETCH 2 50 0
 0 ROTATION CENTER 0 0 0 1 "Custom" 
 0 ROTATION CONFIG 0 0
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 4-4cyli.dat
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 4-4cyli.dat
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 S\LS32.DAT
+1 0 0 0 0 2 0 0 0 1 0 0 0 2 4-4cyli.dat
+1 0 0 0 0 2 0 0 0 1 0 0 0 2 4-4cyli.dat
+0 // LSynth Electric Technic Fiber Optics - End Piece
+1 0 0 0 0 1 0 0 0 0.0357 0 0 0 1 S\LS30.DAT
 0 SYNTH END
 0 
 0
@@ -289,8 +297,11 @@
 0 SYNTH BEGIN DEFINE FLEXIBLE_AXLE HOSE STRETCH 12 40 0
 0 ROTATION CENTER 0 0 0 1 "Custom" 
 0 ROTATION CONFIG 0 0
+0 // LSynth Technic Flexible Axle - End Piece
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 s\LS40.dat
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 s\LS40.dat
+0 // LSynth Technic Flexible Axle - Cross Section
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 s\LS41.dat
+0 // LSynth Technic Flexible Axle - End Piece
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 s\LS40.dat
 0 SYNTH END
 0 
@@ -303,9 +314,12 @@
 0 SYNTH BEGIN DEFINE MINIFIG_CHAIN HOSE FIXED21 2 40 90
 0 ROTATION CENTER 0 0 0 1 "Custom" 
 0 ROTATION CONFIG 0 0
-1 0 0 10 0 1 0 0 0 1 0 0 0 1 209.DAT
-1 14 0 10 0 1 0 0 0 1 0 0 0 1 209.DAT
-1 0 0 10 0 1 0 0 0 1 0 0 0 1 209.DAT
+0 // Minifig Chain Link
+1 0 0 12 0 1 0 0 0 1 0 0 0 1 209.DAT
+0 // Minifig Chain Link
+1 14 0 12 0 1 0 0 0 1 0 0 0 1 209.DAT
+0 // Minifig Chain Link
+1 0 0 12 0 1 0 0 0 1 0 0 0 1 209.DAT
 0 SYNTH END
 0 
 0
@@ -317,10 +331,14 @@
 0 SYNTH BEGIN DEFINE PNEUMATIC_HOSE HOSE STRETCH 12 30 0
 0 ROTATION CENTER 0 0 0 1 "Custom" 
 0 ROTATION CONFIG 0 0
+0 // LSynth Technic Pneumatic Hose - End Piece
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 S\LS20.DAT
+0 // LSynth Technic Pneumatic Hose - Cross Section
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 S\LS21.DAT
+0 // LSynth Technic Pneumatic Hose - End Piece
 1 0 0 -1 0 1 0 0 0 -1 0 0 0 1 S\LS20.DAT
 0 SYNTH END
+0
 0
 0 FILE RIBBED_HOSE.ldr
 0 RIBBED_HOSE SYNTHESIS DEFINITION
@@ -330,8 +348,11 @@
 0 SYNTH BEGIN DEFINE RIBBED_HOSE HOSE FIXED 1 80 0
 0 ROTATION CENTER 0 0 0 1 "Custom" 
 0 ROTATION CONFIG 0 0
+0 // Technic Ribbed Hose End Segment
 1 0 0 -2.5 0 1 0 0 0 -1 0 0 0 1 79.DAT
+0 // Technic Ribbed Hose Segment
 1 6 0 2.5 0 1 0 0 0 1 0 0 0 1 80.dat
+0 // Technic Ribbed Hose End Segment
 1 0 0 2.5 0 1 0 0 0 1 0 0 0 1 79.DAT
 0 SYNTH END
 0 
@@ -430,7 +451,8 @@
 1 0 0 32 0 0.342 0.94 0 0.94 -0.342 0 0 0 1 681.DAT
 0 SYNTH END
 0 
-0
+0 
+0 
 0 
 0 
 0 
