@@ -444,23 +444,17 @@ render_hose_segment(
     if (i == 0 && first) {
       type = hose->start.type;
       vectorcp(offset,hose->start.offset);
-      matrixmult3(m2,hose->start.orient,m1);
+      if (hose->start.attrib != 0) // FIXED size start, do not stretch it. 
+	matrixcp(m2,hose->start.orient);
+      else  // Stretch it.
+	matrixmult3(m2,hose->start.orient,m1);
     } else if (i == n_segments-2 && last) {
       type = hose->end.type;
-#if 0
-      // This looks wrong.  
-      // First, the segment length offset was getting overwritten below.
-      // But how do we know to negate the length?  
-      // Does that imply we expect the end orient to flip it?  It might not.
-      offset[0] = 0; offset[1] = -l; offset[2] = 0;
-      vectorrot(offset,segments[i].orient);
-#else
-      // The -1 gets scaled (by segment length l) and rotated later,
-      // but how do we know to use the negative?
-      //offset[0] = 0; offset[1] = -1; offset[2] = 0;
       vectorcp(offset,hose->end.offset);
-#endif
-      matrixmult3(m2,hose->end.orient,m1);
+      if (hose->end.attrib != 0) // FIXED size end, do not stretch it. 
+	matrixcp(m2,hose->end.orient);
+      else // Stretch it.
+	matrixmult3(m2,hose->end.orient,m1);
     } else {
       type = hose->mid.type;
       vectorcp(offset,hose->mid.offset);
@@ -604,7 +598,38 @@ render_hose(
     fprintf(output,"0 SYNTH SYNTHESIZED BEGIN\n");
   }
 
-  //printf("FIXED = %d\n", hose->fill);
+  if (hose->fill == STRETCH) {
+    PRECISION offset[3];
+    PRECISION l;
+
+    printf("STRETCH = (%d, %d, %d)\n", 
+	   hose->start.attrib, hose->mid.attrib, hose->end.attrib);
+
+    // I can add two constraints if I want here.  They're not used afterwards.
+    // Just don't go over 128 constraints.
+    l = hose->start.attrib;
+    if (l != 0.0) {
+      n_constraints++;
+      for (c = n_constraints-1; c > 0; c--) {
+	memcpy(&constraints[c], &constraints[c-1], sizeof(part_t));
+      }
+
+      offset[0] = 0; offset[1] = -l; offset[2] = 0;
+      vectorrot(offset,constraints[0].orient);
+      vectoradd(constraints[1].offset, offset);
+    }
+
+    l = hose->end.attrib;
+    if (l != 0.0){
+      n_constraints++;
+      c = n_constraints-1;
+      memcpy(&constraints[c], &constraints[c-1], sizeof(part_t));
+
+      offset[0] = 0; offset[1] = l; offset[2] = 0;
+      vectorrot(offset,constraints[n_constraints-1].orient);
+      vectoradd(constraints[n_constraints-2].offset, offset);
+    }
+  }
 
   mid_constraint = constraints[0];
 
