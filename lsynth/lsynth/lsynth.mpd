@@ -305,7 +305,7 @@
 0 // LSynth Technic Flexible Axle - Cross Section
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 s\LS41.dat
 0 // LSynth Technic Flexible Axle - End Piece
-1 4 0 -40 0 1 0 0 0 1 0 0 0 1 s\LS40.dat
+1 40 0 0 0 1 0 0 0 1 0 0 0 1 s\LS40.dat
 0 SYNTH END
 0 
 0

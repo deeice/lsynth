@@ -598,6 +598,9 @@ render_hose(
     fprintf(output,"0 SYNTH SYNTHESIZED BEGIN\n");
   }
 
+  // First and Last parts for STRETCH hose could be FIXED length.
+  // Add up to two new constraints to handle this.  They're not used afterwards.
+  // Just don't go over 128 constraints.
   if (hose->fill == STRETCH) {
     PRECISION offset[3];
     PRECISION l;
@@ -605,8 +608,6 @@ render_hose(
     printf("STRETCH = (%d, %d, %d)\n", 
 	   hose->start.attrib, hose->mid.attrib, hose->end.attrib);
 
-    // I can add two constraints if I want here.  They're not used afterwards.
-    // Just don't go over 128 constraints.
     l = hose->start.attrib;
     if (l != 0.0) {
       n_constraints++;
@@ -657,15 +658,21 @@ render_hose(
 
     // create an oversampled curve
 
-    if (hose->fill == FIXED) 
+    if (hose->fill == FIXED) // Save room for end constraint point.
       synth_curve(&first,&second,segments,n_segments-1,hose->stiffness,output);
-    else
+    else if (hose->fill == STRETCH) 
+      synth_curve(&first,&second,segments,n_segments-1,hose->stiffness,output);
+    else if (hose->fill > FIXED)
+      synth_curve(&first,&second,segments,n_segments-1,hose->stiffness,output);
+    else // Old way.  Overwrite last point with end constraint point.  Not good.
       synth_curve(&first,&second,segments,n_segments,hose->stiffness,output);
 
     // reduce oversampled curve to fixed length chunks, or segments limit
     // by angular resolution
 
     if (hose->fill == STRETCH) {
+      // Make sure final segment matches second constraint
+      vectorcp(segments[n_segments-1].offset,second.offset);
       merge_segments_angular(
         &first,
         &second,
@@ -678,21 +685,12 @@ render_hose(
       vectorcp(segments[n_segments-1].offset,second.offset);
       // move normalized result back into its original orientation and position
       mid_constraint = constraints[c+1];
-      //orient(&first,&second,n_segments,segments);
-      orientq(&first,&second,n_segments,segments); // With quaternions!
+      printf("orient(N_SEGMENTS = %d)\n", n_segments);
+      if (n_segments <= 2) // orientq has div by 0 problems on short segs.
+        orient(&first,&second,n_segments,segments);
+      else
+	orientq(&first,&second,n_segments,segments); // With quaternions!
     }
-#if 0
-    else if (hose->fill == FIXED) {
-      merge_segments_length(segments,&n_segments,hose->mid.attrib,output);
-      // Make sure final segment matches second constraint
-      vectorcp(segments[n_segments-1].offset,second.offset);
-      // move normalized result back into its original orientation and position
-      mid_constraint = constraints[c+1];
-      vectorcp(mid_constraint.offset,segments[n_segments-2].offset);
-      orient(&first,&second,n_segments,segments);
-      //orientq(&first,&second,n_segments,segments);
-    }
-#else
     else if (hose->fill == FIXED) {
       // Make sure final segment point matches second constraint
       vectorcp(segments[n_segments-1].offset,second.offset);
@@ -721,7 +719,6 @@ render_hose(
       orient(&first,&second,n_segments,segments);
       //orientq(&first,&second,n_segments,segments);
     }
-#endif
     else { // For N fixed size chunks just copy into one big list, merge later.
       // Make sure final segment matches second constraint
       vectorcp(segments[n_segments-1].offset,second.offset);

@@ -946,7 +946,7 @@ orientq(
   for (i = 1; i < n_segments; i++) {
 
     // Interpolate the twist (if there is any) over the length of segment.
-    if (r != 0.0)
+    if ((r != 0.0) && (total_length != 0))
     {
       cur_length = hose_length(i,segments);
       cur_length /= total_length;
