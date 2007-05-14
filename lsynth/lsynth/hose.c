@@ -229,7 +229,7 @@ merge_segments_angular(
       b++;
     }
   }
-  if (n < 2) {
+  if (n <= 2) {
     segments[1] = segments[*n_segments-1];
     n = 2;
   } else if (b - a > 1) {
@@ -605,8 +605,10 @@ render_hose(
     PRECISION offset[3];
     PRECISION l;
 
+#ifdef DEBUGGING_HOSES
     printf("STRETCH = (%d, %d, %d)\n", 
 	   hose->start.attrib, hose->mid.attrib, hose->end.attrib);
+#endif
 
     l = hose->start.attrib;
     if (l != 0.0) {
@@ -685,7 +687,9 @@ render_hose(
       vectorcp(segments[n_segments-1].offset,second.offset);
       // move normalized result back into its original orientation and position
       mid_constraint = constraints[c+1];
+#ifdef DEBUGGING_HOSES
       printf("orient(N_SEGMENTS = %d)\n", n_segments);
+#endif
       orientq(&first,&second,n_segments,segments); // With quaternions!
     }
     else if (hose->fill == FIXED) {
