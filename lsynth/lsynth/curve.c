@@ -632,6 +632,11 @@ PRECISION get_turn_mat(PRECISION M[3][3],PRECISION a[3],PRECISION b[3],PRECISION
     //Dot product gives turn angle.  a.b=|a||b|cos(theta)
     //We normalized so |a|=|b|=1, which means theta = acos(a.b).
     r = dotprod(b, a);
+    // Warning!!  acos() will give NAN if we give it badly normalized numbers.
+    if (r > 1.0) 
+      r = 1.0;
+    if (r < -1.0) 
+      r = -1.0;
     r = acos(r);
 
     //Cross product gives turn axis.
@@ -655,7 +660,7 @@ PRECISION get_turn_mat(PRECISION M[3][3],PRECISION a[3],PRECISION b[3],PRECISION
     // instead of always applying the whole turn from the start matrix.
     // But do we lose control of the up vector if we do that?
 
-    if (normalize(t) == 0)
+    if ((normalize(t) == 0) || (r == 0.0))
     {
       if (dotprod(b, a) < 0)
       {
@@ -714,6 +719,16 @@ orientq(
   PRECISION pi = 2*atan2(1,0);
   PRECISION degrees = 180.0 / pi;
 //#endif      
+
+#if 0
+  // Use simple linear up vector interpolation for 2 segs or less.
+  // Eventually I may need to do something to break these up if spin > 1 degree.
+  if (n_segments <= 2)
+  {
+    orient(start, end, n_segments, segments);
+    return;
+  }
+#endif
 
   // Get the start and end velocity vectors.
   // The basic HoseSeg.dat files extend the hose along the +Y axis.

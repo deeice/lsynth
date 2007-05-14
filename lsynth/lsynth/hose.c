@@ -686,10 +686,7 @@ render_hose(
       // move normalized result back into its original orientation and position
       mid_constraint = constraints[c+1];
       printf("orient(N_SEGMENTS = %d)\n", n_segments);
-      if (n_segments <= 2) // orientq has div by 0 problems on short segs.
-        orient(&first,&second,n_segments,segments);
-      else
-	orientq(&first,&second,n_segments,segments); // With quaternions!
+      orientq(&first,&second,n_segments,segments); // With quaternions!
     }
     else if (hose->fill == FIXED) {
       // Make sure final segment point matches second constraint
