@@ -33,7 +33,7 @@ part_t   band_constraints[64];
 
 #define N_BAND_CONSTRAINTS n_band_constraints
 
-void band_ini(void)
+void band_ini(void)
 {
   int i;
 
@@ -90,7 +90,7 @@ list_band_constraints(void)
   }
 }
 
-/*
+/*
  * Calculate the issues of crossers
  */
 
@@ -142,7 +142,7 @@ calc_crosses(
   }
 }
 
-/*
+/*
  * Calculate the entry and exit angles of a band
  * around a constraint.
  */
@@ -183,6 +183,58 @@ calc_angles(
     angle = -acos(dx);
   }
 
+#define USE_TURN_ANGLE 1
+#ifdef USE_TURN_ANGLE 
+  // The problem here is this:
+  // angle is the angle at which the tangent leaving this constraint starts at.
+  // I need to get THE DIFFERENCE between that angle and the previous constraint
+  // before I can calculate n_steps.
+  // See get_turn_mat() fn in curve.t for calculating the turn angle
+
+ {
+  PRECISION r;
+  PRECISION a[3];
+  PRECISION b[3];
+
+  extern PRECISION dotprod(PRECISION a[3], PRECISION b[3]);
+  
+  if (k->cross || ! k->inside) {
+    vectorcp(a, k->end_angle);
+    vectorcp(b, k->start_angle);
+  } else {
+    vectorcp(b, k->end_angle);
+    vectorcp(a, k->start_angle);
+  }
+
+  vectorsub(a, k->part.offset);
+  vectorsub(b, k->part.offset);
+  normalize(a);
+  normalize(b);
+
+    //Dot product gives turn angle.  a.b=|a||b|cos(theta)
+    //We normalized so |a|=|b|=1, which means theta = acos(a.b).
+    r = dotprod(b, a);
+    // Warning!!  acos() will give NAN if we give it badly normalized numbers.
+    if (r > 1.0) 
+      r = 1.0;
+    if (r < -1.0) 
+      r = -1.0;
+    r = acos(r);
+
+#ifdef DEBUGGING_FIXED3_BANDS
+  if (k->cross || ! k->inside) 
+    printf("(%.2f, %.2f) Outer Angle = %.2f from (%.2f, %.2f) r = %.2f\n", 
+	   k->part.offset[0], k->part.offset[1], angle * 180 / pi, dx, dy, r * 180 / pi);
+  else
+    printf("(%.2f, %.2f) Inner Angle = %.2f from (%.2f, %.2f) r = %.2f\n", 
+	   k->part.offset[0], k->part.offset[1], angle * 180 / pi, dx, dy, r * 180 / pi);
+#endif
+
+  ta = r;
+ }
+
+#endif
+
   k->s_angle = angle;
 
   if (type->fill == FIXED3) {
@@ -190,9 +242,12 @@ calc_angles(
     if (angle < 0) {
       angle = - angle;
     }
+#ifdef USE_TURN_ANGLE 
+    circ = ta*k->radius;
+#else
     circ = angle*2*k->radius;
+#endif
     k->n_steps = circ*type->scale+0.5;
-
   } else if (type->fill == FIXED) {
 
     n = type->scale * 2 * pi * k->radius + 0.5;
@@ -231,12 +286,14 @@ calc_angles(
   }
 }
 
-/*
+/*
  * figure out the intersections of a line and a circle.
+ *   - line is in x = xo + f*t, y = yo + g*t (normalized parametric) form 
+ *   - circle is (xj, yj, rj)
  */
 
 int intersect_line_circle_2D(
-  PRECISION xo,
+  PRECISION xo, 
   PRECISION yo,
   PRECISION f,
   PRECISION g,
@@ -255,10 +312,10 @@ int intersect_line_circle_2D(
 
   fsq = f * f;
   gsq = g * g;
-  fgsq = fsq + gsq;
+  fgsq = fsq + gsq; // dx2 + dy2 (should be 1 if normalized).
 
   if (fgsq < ACCY) {
-    printf("line coefficients are corrupt\n");
+    printf("line coefficients are corrupt\n"); // Because dx = dy = 0.
   }
 
   xjo = xj - xo;
@@ -279,7 +336,7 @@ int intersect_line_circle_2D(
   return 0;
 }
 
-/*
+/*
  * determine the tangent we want.
  */
 
@@ -411,7 +468,7 @@ int calc_tangent_line(
   return 0;
 }
 
-/*
+/*
  * Render the arc around the constraint and the line to the next
  * constraint
  */
@@ -478,7 +535,10 @@ int draw_arc_line(
         n = L2*type->scale+0.5;
         steps = 0;
       }
-
+      
+#ifdef STRETCH_FIXED3
+      L1 = 1;
+#endif
       for (i = steps; i < n; i++) {
         part_t part;
         PRECISION tm[3][3];
@@ -500,6 +560,29 @@ int draw_arc_line(
           scale[2][2] = 1;
           matrixmult(part.orient,scale);
         }
+#ifdef STRETCH_FIXED3
+	else if (type->fill == FIXED3) {
+          PRECISION scale[3][3];
+          int i,j;
+
+          for (i = 0; i < 3; i++) {
+            for (j = 0; j < 3; j++) {
+              scale[i][j] = 0;
+            }
+          }
+          scale[0][0] = 1;
+	  scale[1][1] = 1;
+          scale[2][2] = 1;
+	  if (n > 1)
+	    scale[0][0] = L1 = (L2*type->scale)/(n-1);
+          matrixmult(part.orient,scale);
+        }
+	
+#endif
+#ifdef DEBUGGING_FIXED3_BANDS
+	if (i == steps)
+	  printf("Scale(%.2f, %.3f, %d) = %.2f)\n", L2, type->scale, n, L1);
+#endif
 
         // We performed this to start:
         //   1.  move the assembly so the first constraint is at the origin
@@ -521,6 +604,12 @@ int draw_arc_line(
         foffset[0] = constraint->crossings[j][0] + dx * i / n - part.offset[0];
         foffset[1] = constraint->crossings[j][1] + dy * i / n - part.offset[1];
         foffset[2] = constraint->crossings[j][2] + dz * i / n - part.offset[2];
+
+#ifdef STRETCH_FIXED3
+        foffset[0] += (L1-1) * dx * (i-1) / ((PRECISION)n -0.5);
+        foffset[1] += (L1-1) * dy * (i-1) / ((PRECISION)n -0.5);
+        foffset[2] += (L1-1) * dz * (i-1) / ((PRECISION)n -0.5);
+#endif
 
         vectorcp(part.offset,foffset);
 
@@ -750,7 +839,7 @@ int draw_arc_line(
   return 0;
 }
 
-void
+void
 showconstraints(
   FILE                *output,
   LSL_band_constraint *constraints,
@@ -792,7 +881,7 @@ rotate_constraints(
   }
 }
 
-/*
+/*
  * This subroutine synthesizes planar rubber bands, chain, and treads.
  *
  * We do all the arc and tangent analysis in the X/Y plane.
