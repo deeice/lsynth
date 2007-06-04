@@ -10,6 +10,9 @@
 0 !HISTORY 2007-03-28 [Willy Tschager] Tweaked MINIFIG_CHAIN offset. Corrected FIBER_OPTIC_CABLE diameter and end piece. Added comments.
 0 !HISTORY 2007-05-08 [DMH]   Shrink FIBER_OPTIC end part.  Tweaked RUBBER and RIBBED hose offsets.
 0 !HISTORY 2007-05-13 [DMH]   Allow FIXED end_part in STRETCH hose.  Did FIBER_OPTIC, probably need to do others.
+0 !HISTORY 2007-05-14 [Willy Tschager] Changed FLEX_SYSTEM CABLE end piece and corrected cross section diameter. Rotated RCX ELECTRIC CABLE at 90 degree. Added comments.
+0 !HISTORY 2007-06-02 [Willy Tschager] Changed FLEX_SYSTEM_CABLE end piece lenght.  
+
 0 
 0 // These are the complete parts that LSynth knows about.
 0 
@@ -88,7 +91,7 @@
 0 //                 used only once.
 0 //    mid_part     this part is used to synthesize the bulk of the hose.
 0 //    <len>        this describes the length associated with fixed length
-0 //                 parts.  This can also be used on the start_part and/or
+0 //                 parts.This can also be used on the start_part and/or
 0 //                 the end_part of a STRETCH hose.
 0 //    <x> <y> <z>  these are used to offset synthesis components as part of
 0 //                 the final synthesis process of placing parts in 3D space.
@@ -198,13 +201,13 @@
 1 6 0 -0.5 4 0 0 -1 0 1 0 1 0 0 6628.dat
 1 13 0 0 -4 1 0 0 0 0 1 0 -1 0 2983.DAT
 1 32 0 0 0 0 0 1 0 1 0 -1 0 0 32089.dat
+0 // Technic Tread Sprocket Wheel
 1 32 0 0 0 1 0 0 0 1 0 0 0 1 32007.DAT
 1 8 0 0 0 0 0 1 0 1 0 -1 0 0 32062.DAT
 1 9 0 0 0 1 0 0 0 1 0 0 0 1 6538A.DAT
 1 35 0 0 21 -1 0 0 0 1 0 0 0 -1 73071.DAT
 1 30 0 0 30 -1 0 0 0 1 0 0 0 -1 6573.DAT
 1 50 0 0 0 1 0 0 0 1 0 0 0 1 3649.DAT
-1 1 0 0 1 1 0 0 0 0 -1 0 1 0 LS00.DAT
 1 10 0 0 0 1 0 0 0 1 0 0 0 1 3647.DAT
 1 18 0 0 0 1 0 0 0 1 0 0 0 1 4019.DAT
 1 18 0 0 0 1 0 0 0 1 0 0 0 1 6542.DAT
@@ -214,6 +217,7 @@
 1 30 0 0 0 1 0 0 0 1 0 0 0 1 3648a.dat
 1 71 0 0 -20 1 0 0 0 0 1 0 -1 0 48451.dat
 1 71 0 0 9 1 0 0 0 0 1 0 -1 0 2855.DAT
+1 1 0 0 1 1 0 0 0 0 -1 0 1 0 LS00.DAT
 0 SYNTH END
 0 
 0
@@ -222,15 +226,15 @@
 0 Name: RCX_ELECTRIC_CABLE.ldr
 0 Author: Kevin L. Clague
 0 Unofficial Model
-0 SYNTH BEGIN DEFINE RCX_ELECTRIC_CABLE HOSE STRETCH 9 30 0
+0 SYNTH BEGIN DEFINE RCX_ELECTRIC_CABLE HOSE STRETCH 9 20 0
 0 ROTATION CENTER 0 0 0 1 "Custom" 
 0 ROTATION CONFIG 0 0
 0 // LSynth Electric Cable Segment
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 S\LS10.DAT
+1 0 0 0 0 0 0 -1 0 1 0 1 0 0 S\LS10.DAT
 0 // LSynth Electric Cable Segment
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 S\LS10.DAT
+1 0 0 0 0 0 0 -1 0 1 0 1 0 0 S\LS10.DAT
 0 // LSynth Electric Cable Segment
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 S\LS10.DAT
+1 0 0 0 0 0 0 -1 0 1 0 1 0 0 S\LS10.DAT
 0 SYNTH END
 0 
 0
@@ -242,9 +246,9 @@
 0 SYNTH BEGIN DEFINE NXT_ELECTRIC_CABLE HOSE STRETCH 9 35 0
 0 ROTATION CENTER 0 0 0 1 "Custom" 
 0 ROTATION CONFIG 0 0
-1 0 0 0 0 2 0 0 0 1 0 0 0 10 S/LS11.DAT
-1 0 0 0 0 2 0 0 0 1 0 0 0 10 S/LS11.DAT
-1 0 0 0 0 2 0 0 0 1 0 0 0 10 S/LS11.DAT
+1 0 0 0 0 0 0 9 0 1 0 -2 0 0 S/LS11.DAT
+1 0 0 0 0 0 0 9 0 1 0 -2 0 0 S/LS11.DAT
+1 0 0 0 0 0 0 9 0 1 0 -2 0 0 S/LS11.DAT
 0 SYNTH END
 0 
 0
@@ -259,7 +263,6 @@
 1 0 0 0 0 2 0 0 0 1 0 0 0 2 4-4cyli.dat
 1 0 0 0 0 2 0 0 0 1 0 0 0 2 4-4cyli.dat
 0 // LSynth Electric Technic Fiber Optics - End Piece
-0 //1 28 0 0 0 1 0 0 0 0.0357 0 0 0 1 S\LS30.DAT
 1 28 0 0 0 1 0 0 0 1 0 0 0 1 S\LS30.DAT
 0 SYNTH END
 0 
@@ -272,9 +275,12 @@
 0 SYNTH BEGIN DEFINE FLEX_SYSTEM_CABLE HOSE STRETCH 6 40 0
 0 ROTATION CENTER 0 0 0 1 "Custom" 
 0 ROTATION CONFIG 0 0
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 S/LS11.DAT
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 S/LS11.DAT
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 S/LS11.DAT
+0 // Technic Flex-System Cable End
+1 20 0 20 0 1 0 0 0 1 0 0 0 1 342.DAT
+0 // LSynth Electric Cable Segment NXT
+1 0 0 0 0 2 0 0 0 1 0 0 0 2 S/LS11.DAT
+0 // Technic Flex-System Cable End
+1 20 0 0 0 1 0 0 0 -1 0 0 0 1 342.DAT
 0 SYNTH END
 0 
 0
@@ -379,7 +385,7 @@
 0 Name: STRING.ldr
 0 Author: Kevin L. Clague
 0 Unofficial Model
-0 SYNTH BEGIN DEFINE STRING HOSE FIXED 2 16 10
+0 SYNTH BEGIN DEFINE STRING HOSE FIXED 2 10 0
 0 ROTATION CENTER 0 0 0 1 "Custom" 
 0 ROTATION CONFIG 0 0
 1 0 0 0 0 1 0 0 0 0 1 0 -1 0 S\LS60.DAT
