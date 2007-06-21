@@ -922,6 +922,11 @@ orientq(
   //Dot product gives turn angle.  a.b=|a||b|cos(theta)
   //We normalized so |a|=|b|=1, which means theta = acos(a.b).
   r = dotprod(up, end_up);
+  // Warning!!  acos() will give NAN if we give it badly normalized numbers.
+  if (r > 1.0) 
+    r = 1.0;
+  if (r < -1.0) 
+    r = -1.0;
   r = acos(r);
 
   //Cross product gives turn axis.
