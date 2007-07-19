@@ -13,8 +13,9 @@
 0 !HISTORY 2007-05-14 [Willy Tschager] Changed FLEX_SYSTEM CABLE end piece and corrected cross section diameter. Rotated RCX ELECTRIC CABLE at 90 degree. Added comments.
 0 !HISTORY 2007-06-02 [Willy Tschager] Changed FLEX_SYSTEM_CABLE end piece lenght.  
 0 !HISTORY 2007-06-07 [Willy Tschager] Added STRING_BAND meta. Changed STRING to STRING_HOSE. Set STRING_HOSE stiffness to 10. Added new smaller constraint LS03.dat - speciffically designed for strings.  
-0 !HISTORY 2007-06-07 [Willy Tschager] Renamed hose constraints. Added more comments. Changed MINIFIG_CHAIN_21 to MINIFIG_CHAIN_21
+0 !HISTORY 2007-06-07 [Willy Tschager] Renamed hose constraints. Added more comments. Changed MINIFIG_CHAIN_17 to MINIFIG_CHAIN_21
 0 !HISTORY 2007-06-20 [Willy Tschager] Changed PLASTIC_TREAD to TECHNIC_LINK_TREAD. Added RUBBER_HOSE_8.5L_WITH_TABS. Added RUBBER_HOSE_8.5L_WITH_TABS. Added more comments. 
+0 !HISTORY 2007-06-27 [Willy Tschager] Added Technic Bush to BAND_CONSTRAINTS.ldr. Modified LS00.dat in order that it redirects to LS01.dat (~Moveto). 
 0 //
 0 //
 0 //
@@ -180,13 +181,15 @@
 0 SYNTH BEGIN DEFINE HOSE CONSTRAINTS
 0 ROTATION CENTER 0 0 0 1 "Custom" 
 0 ROTATION CONFIG 0 0
+0 // LSynth Hose Constraint Part - Type 0
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS00.DAT
 0 // LSynth Hose Constraint Part - Type 1
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS01.DAT
 0 // LSynth Hose Constraint Part - Type 2
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS02.DAT
 0 // LSynth Hose Constraint Part - Type 3
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS03.DAT
-0 // LSynth Hose Constraint Part - Type 4
+0 // LSynth String Constraint Part - Type 4
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS04.DAT
 0 SYNTH END
 0 
@@ -205,6 +208,8 @@
 1 29 0 0 0 1 0 0 0 1 0 0 0 1 4185.dat
 0 // Technic Transmission Driving Ring
 1 15 0 0 0 1 0 0 0 1 0 0 0 1 6539.dat
+0 // Technic Bush
+1 9 0 0 0 1 0 0 0 1 0 0 0 1 3713.dat
 0 // Technic Bush 1/2 Smooth
 1 9 0 0 0 1 0 0 0 1 0 0 0 1 32123.dat
 0 // Technic Bush 1/2 Type 1
