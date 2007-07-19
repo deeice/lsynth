@@ -183,6 +183,9 @@ calc_angles(
     angle = -acos(dx);
   }
 
+// #define DEBUGGING_FIXED3_BANDS 1
+// #define STRETCH_FIXED3 1
+
 #define USE_TURN_ANGLE 1
 #ifdef USE_TURN_ANGLE 
   // The problem here is this:
@@ -247,10 +250,19 @@ calc_angles(
 #else
     circ = angle*2*k->radius;
 #endif
+#ifdef STRETCH_FIXED3
+    // Do not round up the number of arc steps.  Stretch the tangent lines instead.
+    k->n_steps = circ*type->scale;
+#else
     k->n_steps = circ*type->scale+0.5;
+#endif
   } else if (type->fill == FIXED) {
 
+#ifdef STRETCH_FIXED3
+    n = type->scale * 2 * pi * k->radius;
+#else
     n = type->scale * 2 * pi * k->radius + 0.5;
+#endif
 
     // circumference
     for (i = 0; i < n; i++) {
@@ -264,7 +276,11 @@ calc_angles(
         break;
       }
     }
+#ifdef STRETCH_FIXED3
     k->n_steps = i+1;
+#else
+    k->n_steps = i+1;
+#endif
   } else {
 
     n =  2 * pi * k->radius/band_res + 0.5;
@@ -502,6 +518,20 @@ int draw_arc_line(
 
       L1 = sqrt(dx*dx + dy*dy);
       L2 = sqrt(dx*dx + dy*dy + dz*dz);
+#ifdef DEBUGGING_FIXED3_BANDS
+      printf("Direction = (%.3f, %.3f, %.3f) => %.3f_L1, %.3f_L2)\n", dx, dy, dz, L1, L2);
+      // ******************************
+      // Based on this it looks like L2 is already in whole number units of part len
+      // (where part len is 1/type->scale).
+      // In order to be able to stretch things a bit to fit, I need a raw length
+      // in L1 or L2.  (L2 should always = L1 since dz=0 when we move to XY plane.)
+      //
+      // Maybe not.  It just works out that way here in my example.
+      // Really what I need to do is delay the line drawing until after the arcs.
+      // Calculate the arcs (making sure to always round n arc segs down)
+      // Then move the j+1 crossings to meet the ends of the arcs, 
+      // stretching L1 a bit in the process.
+#endif
       if (L1 == 0) {
 
         orient[0][0] = 1;
@@ -574,7 +604,7 @@ int draw_arc_line(
 	  scale[1][1] = 1;
           scale[2][2] = 1;
 	  if (n > 1)
-	    scale[0][0] = L1 = (L2*type->scale)/(n-1);
+	    scale[0][0] = L1 = (L2*type->scale -1)/(n-1);
           matrixmult(part.orient,scale);
         }
 	
@@ -836,6 +866,7 @@ int draw_arc_line(
       vectorcp(f,s);
     }
   }
+
   return 0;
 }
 
