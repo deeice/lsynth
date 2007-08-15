@@ -219,6 +219,8 @@
 1 9 0 0 0 1 0 0 0 1 0 0 0 1 4265a.dat
 0 // Technic Bush 1/2 Type 2
 1 9 0 0 0 1 0 0 0 1 0 0 0 1 4265b.dat
+0 // Technic Bush 1/2 Type 3
+1 9 0 0 0 1 0 0 0 1 0 0 0 1 4265c.dat
 0 // Technic Axle Towball
 1 6 0 0 4 0 0 -1 0 1 0 1 0 0 2736.dat
 0 // Technic Pin Towball with Friction
@@ -226,7 +228,8 @@
 0 // Electric Technic Micromotor Pulley
 1 13 0 0 -4 1 0 0 0 0 1 0 -1 0 2983.dat
 0 // Technic Tread Spocket Wheel Thin
-1 32 0 0 0 0 0 1 0 1 0 -1 0 0 32089.dat
+0 // 1 32 0 0 0 0 0 1 0 1 0 -1 0 0 32089.dat
+1 32 0 0 0 0 0 -1 0 1 0 1 0 0 32089.dat
 0 // Technic Tread Sprocket Wheel
 1 32 0 0 0 1 0 0 0 1 0 0 0 1 32007.dat
 0 // Technic Axle  2 Notched

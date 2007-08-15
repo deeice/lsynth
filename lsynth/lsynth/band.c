@@ -893,6 +893,8 @@ showconstraints(
       cp->orient[2][0],cp->orient[2][1],cp->orient[2][2],
       cp->type);
   }
+
+  fflush(output);
 #endif
 }
 
@@ -1052,7 +1054,14 @@ synth_band(
     }
   }
 
-  //showconstraints(output,constraints,n_constraints,3);
+  //***************************************************************************
+  //NOTE: This dies if I use only constraints  NOT listed as band constraints.
+  //      By the time I get here constraints[0].part->type is a mangled string.
+  //      Perhaps the whole part is crap, or perhaps cp->type got overwritten.
+  //***************************************************************************
+
+  fflush(output);
+  showconstraints(output,constraints,n_constraints,3);
 
   /* figure out the tangents' intersections with circles */
 
@@ -1102,6 +1111,39 @@ synth_band(
       }
     }
   }
+
+
+#ifndef SHOW_CROSSES 
+  for (i = 0; i < n_constraints-1; i++) {
+    part_t *cp = &constraints[i].part;
+    LSL_band_constraint *k = &constraints[i];
+    int color = 4;
+    output_line(
+      output,
+      0,
+      NULL,
+      color,
+      //cp->offset[0]+k->start_line[0],cp-> offset[1]+k->start_line[0], cp->offset[2]+k->start_line[2],
+      k->start_line[0], k->start_line[1], k->start_line[2],
+      cp->orient[0][0],cp->orient[0][1],cp->orient[0][2],
+      cp->orient[1][0],cp->orient[1][1],cp->orient[1][2],
+      cp->orient[2][0],cp->orient[2][1],cp->orient[2][2],
+      "LS02.dat");
+    color = 2;
+    output_line(
+      output,
+      0,
+      NULL,
+      color,
+      //cp->offset[0]+k->start_line[0],cp-> offset[1]+k->start_line[0], cp->offset[2]+k->start_line[2],
+      k->end_line[0], k->end_line[1], k->end_line[2],
+      cp->orient[0][0],cp->orient[0][1],cp->orient[0][2],
+      cp->orient[1][0],cp->orient[1][1],cp->orient[1][2],
+      cp->orient[2][0],cp->orient[2][1],cp->orient[2][2],
+      "LS02.dat");
+  }
+#endif
+
 
 #define BAND_DIAM 4
 
