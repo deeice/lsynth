@@ -965,6 +965,15 @@ synth_band(
     return 0;
   }
 
+  // Hmmm, maybe I should redirect all info messages to stderr
+  // (so lsynth can be used as a filter).
+  // Or maybe redirect to stderr ONLY if its a filter (if (output == stdout))
+
+  if (n_constraints < 1) {
+    fprintf(stderr, "No BAND constraints found.\n");
+    return 0;
+  }
+
   first = -1;
 
   for (i = 0; i < n_constraints; i++) {
@@ -1057,7 +1066,7 @@ synth_band(
   //***************************************************************************
   //NOTE: This dies if I use only constraints  NOT listed as band constraints.
   //      By the time I get here constraints[0].part->type is a mangled string.
-  //      Perhaps the whole part is crap, or perhaps cp->type got overwritten.
+  //      Perhaps the whole constraint part is crap, or perhaps just the name.
   //***************************************************************************
 
   fflush(output);
