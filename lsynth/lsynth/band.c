@@ -33,6 +33,9 @@ part_t   band_constraints[64];
 
 #define N_BAND_CONSTRAINTS n_band_constraints
 
+// Make current band_type a global var so we can use it everywhere.
+band_attrib_t *band_type = NULL;
+
 void band_ini(void)
 {
   int i;
@@ -503,6 +506,7 @@ int draw_arc_line(
   int       i,j,n;
   PRECISION dx,dy,dz;
   PRECISION L1,L2;
+  PRECISION inv[3][3];
   int steps;
 
   if (draw_line) {
@@ -654,7 +658,8 @@ int draw_arc_line(
         //       who's gear plane is perpendicular to the plane of say the 24T
         //       gears.
 
-        vectorrot( part.offset,band_constraints[f_constraint->band_constraint_n].orient);
+	matrixinv(inv,band_constraints[f_constraint->band_constraint_n].orient);
+        vectorrot( part.offset,inv);
 
         //   6.  Orient the tangent part offsetation back to the absolute 3D
         //       offsetation.
@@ -671,9 +676,7 @@ int draw_arc_line(
         //       to the standard 24T gear's gear plane
 
         matrixcp(tm,part.orient);
-        matrixmult3(part.orient,
-                    band_constraints[f_constraint->band_constraint_n].orient,
-                    tm);
+        matrixmult3(part.orient, inv, tm);
 
         //   9.  Now rotate the part back into its correct orientation in 3D
         //       space.
@@ -818,14 +821,14 @@ int draw_arc_line(
       //       where the gear plane does not go through the origin.)
 
       vectoradd(part.offset,band_constraints[f_constraint->band_constraint_n].offset);
-      vectoradd(part.offset,band_constraints[f_constraint->band_constraint_n].offset);
 
       //   5.  Orient arc part based on the orientation of the first
       //       constraint's orientation (for things like technic turntable
       //       who's gear plane is perpendicular to the plane of say the 24T
       //       gears.)
 
-      vectorrot(part.offset,band_constraints[f_constraint->band_constraint_n].orient);
+      matrixinv(inv,band_constraints[f_constraint->band_constraint_n].orient);
+      vectorrot(part.offset,inv);
 
       //   6.  Orient the arc part offsetation back to the absolute 3D
       //       offsetation.
@@ -842,9 +845,7 @@ int draw_arc_line(
       //       to the standard 24T gear's gear plane)
 
       matrixcp(tm,part.orient);
-      matrixmult3(part.orient,
-                  band_constraints[f_constraint->band_constraint_n].orient,
-                  tm);
+      matrixmult3(part.orient, inv, tm);
 
       //   9.  Now rotate the part back into its correct orientation in 3D
       //       space.
@@ -933,6 +934,25 @@ rotate_constraints(
  * need to be offset to get the place where the band should hit onto the
  * X/Y plane.
  */
+
+//*****************************************************************
+// NOTES:  
+// 
+// What's the meaning of the tangent directives? (INSIDE, OUTSIDE, CROSS)
+// INSIDE, OUTSIDE refer to where we want the next wheel to be.
+// It's either gonna be placed inside the band, or outside the band.
+// If I move the constraints in the XY plane and draw the band CCW
+// then the next wheel will be left of the band for INSIDE.
+// The constraint will be to the right of the band for OUTSIDE.
+// The default is INSIDE.  
+// CROSS means OUTSIDE, then INSIDE.  It can be used to make an X.
+// 
+// CROSS really only should be allowed for string and rubber bands.
+// It doesn't make much sense for rubber treads, although I suspect
+// it could be used to put one wheel of three on the outside.
+//
+//*****************************************************************
+
 int
 synth_band(
   char *type,
@@ -951,10 +971,12 @@ synth_band(
   part_t absolute;
   PRECISION inv[3][3],trot[3][3];
   int layer = 0;
-  band_attrib_t *band_type = NULL;
+
+  // Make band_type a global var so we can use it everywhere.
+  // band_attrib_t *band_type = NULL;
 
   /* Search for band type */
-
+  band_type = NULL;
   for (i = 0; i < N_BAND_TYPES; i++) {
     if (strcasecmp(type,band_types[i].type) == 0) {
       band_type = &band_types[i];
