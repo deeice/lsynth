@@ -21,6 +21,7 @@
 0 !HISTORY 2008-02-23 [Willy Tschager] Added BRICK_ARC. Added new constraints. Added ELECTRIC_POWER_FUNCTIONS_CABLE.
 0 !HISTORY 2008-03-10 [Willy Tschager] Added Minifig Chain constraints.
 0 !HISTORY 2009-05-06 [Don M. Heyse]   Fixed singular matrix on constraint 57520.dat.
+0 !HISTORY 2009-05-07 [Don M. Heyse]   Fixed constraint offsets on TECHNIC_CHAIN_TREAD_38.
 0 //
 0 //
 0 //
@@ -541,9 +542,9 @@
 0 Unofficial Model
 0 SYNTH BEGIN DEFINE TECHNIC_CHAIN_TREAD_38 BAND FIXED 0.035 8
 0 // Technic Chain Tread 38
-1 0 0 0 16 0 1 0 0 0 -1 -1 0 0 57518.dat
+1 0 0 0 0 0 1 0 0 0 -1 -1 0 0 57518.dat
 0 // Technic Chain Tread 38
-1 0 0 0 0 0 -1 0 0 0 1 -1 0 0 57518.dat
+1 0 0 0 -32 0 -1 0 0 0 1 -1 0 0 57518.dat
 0 SYNTH END
 0 
 0
