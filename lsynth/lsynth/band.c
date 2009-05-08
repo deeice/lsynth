@@ -180,6 +180,12 @@ calc_angles(
   dx /= k->radius;
   dy /= k->radius;
 
+  // Warning!!  acos() will give NAN if we give it badly normalized numbers.
+  if (dx > 1.0) 
+    dx = 1.0;
+  if (dx < -1.0) 
+    dx = -1.0;
+
   if (dy > 0) {
     angle = acos(dx);
   } else {
@@ -229,11 +235,13 @@ calc_angles(
 
 #ifdef DEBUGGING_FIXED3_BANDS
   if (k->cross || ! k->inside) 
-    printf("(%.2f, %.2f) Outer Angle = %.2f from (%.2f, %.2f) r = %.2f\n", 
-	   k->part.offset[0], k->part.offset[1], angle * 180 / pi, dx, dy, r * 180 / pi);
+    printf("OUTSIDE(%.2fx, %.2fy, %dr)  Angle = %.2f from (%.2f, %.2f) r = %.2f\n", 
+	   k->part.offset[0], k->part.offset[1], (int)k->radius,
+	   angle * 180 / pi, dx, dy, r * 180 / pi);
   else
-    printf("(%.2f, %.2f) Inner Angle = %.2f from (%.2f, %.2f) r = %.2f\n", 
-	   k->part.offset[0], k->part.offset[1], angle * 180 / pi, dx, dy, r * 180 / pi);
+    printf("INSIDE(%.2fx, %.2fy, %dr)  Angle = %.2f from (%.2f, %.2f) r = %.2f\n", 
+	   k->part.offset[0], k->part.offset[1], (int)k->radius, 
+	   angle * 180 / pi, dx, dy, r * 180 / pi);
 #endif
 
   ta = r;
@@ -261,11 +269,14 @@ calc_angles(
 #endif
   } else if (type->fill == FIXED) {
 
-#ifdef STRETCH_FIXED3
-    n = type->scale * 2 * pi * k->radius;
+#ifdef USE_TURN_ANGLE 
+    PRECISION circ;
+    circ = ta*k->radius;
+    k->n_steps = circ*type->scale + 0.5;
+    k->n_steps++; // Not really steps, but segment endpoints?  So add 1 more point.
+    printf("nsteps = %d = (%.2f / %.2f\n", k->n_steps, circ, 1.0 / type->scale);
 #else
     n = type->scale * 2 * pi * k->radius + 0.5;
-#endif
 
     // circumference
     for (i = 0; i < n; i++) {
@@ -279,12 +290,9 @@ calc_angles(
         break;
       }
     }
-#ifdef STRETCH_FIXED3
-    k->n_steps = i+1;
-#else
     k->n_steps = i+1;
 #endif
-  } else {
+  } else { // (type->fill == STRETCH)
 
     n =  2 * pi * k->radius/band_res + 0.5;
 
@@ -342,6 +350,9 @@ int intersect_line_circle_2D(
   fygx = f*yjo - g*xjo;
   root = rj*rj*fgsq - fygx*fygx;
 
+  // What's the story with this message?  I get it sometimes but this still works.
+  // We eliminate the two degenerate cases (circles overlap) in calc_tangent_line() 
+  // So this fn should ALWAYS work when it's called.  I suspect this is bogus...
   if (root < -ACCY) {
     printf("line does not intersect with circle\n");
   }
@@ -422,6 +433,12 @@ int calc_tangent_line(
     root = denom - rlk*rlk;
     if (root < -ACCY) {
       /* tangent doesn exist */
+      // ie. sqr(dist) < sqr(radius)
+      // NOTE:  actually we should check for (root < +ACCY) because:
+      // For the outer tangent case this means one circle is completely
+      // inscribed within the other.
+      // For the inner tangent case this means the circles touch or
+      // overlap.
     } else {
 
       PRECISION a,b,c;
@@ -1092,7 +1109,9 @@ synth_band(
   //***************************************************************************
 
   fflush(output);
+#ifdef SHOW_XY_PLANE_FOR_DEBUG
   showconstraints(output,constraints,n_constraints,3);
+#endif
 
   /* figure out the tangents' intersections with circles */
 
@@ -1107,6 +1126,9 @@ synth_band(
       }
       for (j = i+1; j < n_constraints; j++) {
         if (constraints[j].radius) {
+#ifdef DEBUGGING_FIXED3_BANDS
+	  printf("calc_tan(%d->%d)\n", i, j);
+#endif
           calc_tangent_line(&constraints[i],&constraints[j],output);
           i = j;
           last = j;
@@ -1144,7 +1166,7 @@ synth_band(
   }
 
 
-#ifndef SHOW_CROSSES 
+#ifdef SHOW_XY_PLANE_FOR_DEBUG
   for (i = 0; i < n_constraints-1; i++) {
     part_t *cp = &constraints[i].part;
     LSL_band_constraint *k = &constraints[i];
