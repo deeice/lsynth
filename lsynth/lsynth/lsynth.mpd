@@ -22,6 +22,7 @@
 0 !HISTORY 2008-03-10 [Willy Tschager] Added Minifig Chain constraints.
 0 !HISTORY 2009-05-06 [Don M. Heyse]   Fixed singular matrix on constraint 57520.dat.
 0 !HISTORY 2009-05-07 [Don M. Heyse]   Fixed constraint offsets on TECHNIC_CHAIN_TREAD_38.
+0 !HISTORY 2009-05-09 [Don M. Heyse]   Fixed constraint offsets on 57520 & 6628.
 0 //
 0 //
 0 //
@@ -150,7 +151,7 @@
 0 //                 properly orient and stretch the parts in the synthesis
 0 //                 process.
 0 //
-0 // For BANDs with the FILL3 fill type use two parts in addition to the
+0 // For BANDs with the FIXED3 fill type use two parts in addition to the
 0 // tangent_part and arc_part.  These two extra parts are used to transistion
 0 // from tangent to arc, and arc to tangent.  Currently these are only used
 0 // for RUBBER_TREAD.
@@ -253,11 +254,11 @@
 0 // Technic Gear 40 Tooth
 1 50 0 0 0 1 0 0 0 1 0 0 0 1 3649.DAT
 0 // Technic Pin Towball with Friction
-1 6 0 -0.5 4 0 0 -1 0 1 0 1 0 0 6628.dat
+1 6 0 0 2 0 0 -1 0 1 0 1 0 0 6628.dat
 0 // Technic Pulley Large
 1 45 0 0 0 1 0 0 0 1 0 0 0 1 3736.DAT
 0 // Technic Sprocket Wheel 25.4
-1 25 0.4 0 0 1 0 0 0 1 0 0 0 1 57520.dat
+1 25 0 0 0 1 0 0 0 1 0 0 0 1 57520.dat
 0 // Technic Sprocket Wheel 40.4
 1 50 0 0 0 1 0 0 0 1 0 0 0 1 57519.dat
 0 // Technic Transmission Driving Ring
