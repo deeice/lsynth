@@ -36,7 +36,20 @@ part_t   band_constraints[64];
 // Make current band_type a global var so we can use it everywhere.
 band_attrib_t *band_type = NULL;
 
-void band_ini(void)
+/************************************************************************/
+// Return 1 if the v2 bends left of v1, -1 if right, 0 if straight ahead.
+int turn_vector(PRECISION v1[3], PRECISION v2[3])
+{
+  /* Pos for left bend, 0 = linear */
+  PRECISION vec_product = (v1[0] * v2[1]) - (v1[1] * v2[0]);
+
+  if (vec_product > 0.0) return(1);
+  if (vec_product < 0.0) return(-1);
+  return(0);
+}
+
+//**********************************************************************
+void band_ini(void)
 {
   int i;
 
@@ -192,7 +205,9 @@ calc_angles(
     angle = -acos(dx);
   }
 
-// #define DEBUGGING_FIXED3_BANDS 1
+#define REORIENT_TREAD 1
+//#define SHOW_XY_PLANE_FOR_DEBUG 1
+#define DEBUGGING_FIXED3_BANDS 1
 // #define STRETCH_FIXED3 1
 
 #define USE_TURN_ANGLE 1
@@ -231,17 +246,42 @@ calc_angles(
       r = 1.0;
     if (r < -1.0) 
       r = -1.0;
+
+    ta = r;
     r = acos(r);
+
+    // Check crossprod(b, a) to see if r is CW or CCW.
+    i = turn_vector(b, a); 
+
+    // Handle round off error near 0 degree turn
+    if ((ta + ACCY) > 1.0) // dotprod() is really 1 so call it no turn.
+      i = 0;
+
+    if (i > 0) 
+      r = 2*pi - r;    
+
+    else if (i == 0) // Handle 0 or 180 by the sign of dotprod()
+    {
+      if (ta < 0)
+	r = pi;
+      else if (k->layer == -2) // The ONLY constraint.
+	r = 2*pi; // Cover the whole thing.
+      else
+	r = 0; // Skip on past this constraint.
+    }
+
+    if (k->layer == -2)
+      k->layer == -1;
 
 #ifdef DEBUGGING_FIXED3_BANDS
   if (k->cross || ! k->inside) 
-    printf("OUTSIDE(%.2fx, %.2fy, %dr)  Angle = %.2f from (%.2f, %.2f) r = %.2f\n", 
+    printf("OUT(%.2fx, %.2fy, %dr)  A = %.2f from (%.2f, %.2f) r = %.2f (%dT%.2f)\n", 
 	   k->part.offset[0], k->part.offset[1], (int)k->radius,
-	   angle * 180 / pi, dx, dy, r * 180 / pi);
+	   angle * 180 / pi, dx, dy, r * 180 / pi, i, ta);
   else
-    printf("INSIDE(%.2fx, %.2fy, %dr)  Angle = %.2f from (%.2f, %.2f) r = %.2f\n", 
+    printf("IN (%.2fx, %.2fy, %dr)  A = %.2f from (%.2f, %.2f) r = %.2f (%dT%.2f)\n", 
 	   k->part.offset[0], k->part.offset[1], (int)k->radius, 
-	   angle * 180 / pi, dx, dy, r * 180 / pi);
+	   angle * 180 / pi, dx, dy, r * 180 / pi, i, ta);
 #endif
 
   ta = r;
@@ -251,7 +291,33 @@ calc_angles(
 
   k->s_angle = angle;
 
-  if (type->fill == FIXED3) {
+  // NOTE: Start converting FIXED3 to FIXED(N) with N segments.
+  // Probably should use something more like a convex hull for FIXED(N)
+  // Gotta review all this STRETCH_FIXED3 stuff.  What was I thinking???
+  //
+  // I should measure the length of the convex hull and stretch it to 
+  // fit N segments if needed.  (Maybe also compress it if a bit too big?)
+  //
+  // Remember FIXED3 was created to indicate we need 3 part types to describe
+  // a (probably rubbery) band (straights, arcs, and transitions).  
+  // That still applies, but now we also want to know how many segments,
+  // so extend it to FIXED(N) like the FIXED(N) hoses.
+  // After all, when you think about it, you only need the special blending
+  // parts when the material is flexible but segmented, which almost implies  
+  // rubber treads.  However I suppose we could retain the special FIXED3
+  // function just in case they make something in multiple sizes.
+  // We don't actually lose much even if we store FIXED3 as type->fill == 3
+  // because a 3 sided rubber tread is pretty dull stuff.
+  // But storing it that way does simplify a bunch of code.
+  // 
+  // Now, do we need full convex hull code or can we get by with some 
+  // turn_vector() tests.  We can borrow that fn from stub.c in ldglite.
+  // Are we always going CCW around the constraints?
+
+  //printf("Band FillType = %d \n",type->fill);
+  // If (type->fill > FIXED) it contains the length (in segments) of the band.
+
+  if ((type->fill == FIXED3) || (type->fill > FIXED)) {
     PRECISION circ;
     if (angle < 0) {
       angle = - angle;
@@ -582,7 +648,10 @@ int draw_arc_line(
       } else if (type->fill == FIXED3) {
         n = L2*type->scale+0.5;
         steps = 1;
-      } else {
+      } else if (type->fill > FIXED) {
+        n = L2*type->scale+0.5;
+        steps = 1;
+      } else { // FIXED
         n = L2*type->scale+0.5;
         steps = 0;
       }
@@ -612,7 +681,7 @@ int draw_arc_line(
           matrixmult(part.orient,scale);
         }
 #ifdef STRETCH_FIXED3
-	else if (type->fill == FIXED3) {
+	else if ((type->fill == FIXED3) || (type->fill > FIXED)) {
           PRECISION scale[3][3];
           int i,j;
 
@@ -664,11 +733,12 @@ int draw_arc_line(
 
         vectorcp(part.offset,foffset);
 
+#ifdef REORIENT_TREAD
         //   4.  Reorient the tangent part in the X/Y plane based on the first
         //       constraint's offset (for things like technic turntable top,
         //       where the gear plane does not go through the origin.
 
-        vectoradd( part.offset,band_constraints[f_constraint->band_constraint_n].offset);
+        vectorsub( part.offset,band_constraints[f_constraint->band_constraint_n].offset);
 
         //   5.  Orient tangent part based on the orientation of the first
         //       constraint's orientation (for things like technic turntable
@@ -700,6 +770,7 @@ int draw_arc_line(
 
         matrixcp(tm,part.orient);
         matrixmult3(part.orient,absolute->orient,tm);
+#endif // REORIENT_TREAD
 
         output_line(
           output,
@@ -735,7 +806,7 @@ int draw_arc_line(
     f[1] = constraint->radius * sin(constraint->s_angle);
     f[2] = 0;
 
-    if (type->fill == FIXED3) {
+    if ((type->fill == FIXED3) || (type->fill > FIXED)) {
       steps = constraint->n_steps + 2;
     } else {
       steps = constraint->n_steps;
@@ -751,9 +822,17 @@ int draw_arc_line(
       // for FIXED3 (e.g. rubber tread), the first and last segments are
       // treated as transition pieces, otherwise just use arc parts
 
-      if (type->fill == FIXED3 && i == 1) {
+#ifdef NEW_BAND_CODE_BUT_STILL_NEEDS_WORK
+      if (((type->fill == FIXED3) || (type->fill > FIXED))
+	  && i == 1 && i+1 == steps) {
+	part = type->tangent; // Only one part.  It probably should be straight.
+	// Of course the right way would be to check the turn angle here,
+	// but we don't save it (r) from calc_angles().
+      } else
+#endif
+      if (((type->fill == FIXED3) || (type->fill > FIXED)) && i == 1) {
         part = type->start_trans;
-      } else if (type->fill == FIXED3 && i+1 == steps) {
+      } if (((type->fill == FIXED3) || (type->fill > FIXED)) && i+1 == steps) {
         part = type->end_trans;
       } else {
         part = type->arc;
@@ -823,21 +902,33 @@ int draw_arc_line(
       matrixcp(tm,part.orient);
       matrixmult3(part.orient,orient,tm);
 
+#ifdef NEW_BAND_CODE_BUT_STILL_NEEDS_WORK
+      if (((type->fill == FIXED3) || (type->fill > FIXED))
+	  && i == 1 && i+1 == steps) // if (part == type->tangent)
+        vectorrot3(part.offset,type->tangent.offset,part.orient);
+      else
+#endif
       vectorrot3(part.offset,type->arc.offset,part.orient);
 
       //   3.  Calculate the arc part's offsetation in the X/Y plane
 
       foffset[0] = f[0] + constraint->part.offset[0] - part.offset[0];
       foffset[1] = f[1] + constraint->part.offset[1] - part.offset[1];
+#ifdef WTF_IS_THIS
       foffset[2] = f[2] + constraint->part.offset[2] - part.offset[2];
+#else
+      // I thought the constraint Z coordinate was always zero in the X/Y plane.
+      foffset[2] = f[2] + 0 - part.offset[2];
+#endif
 
       vectorcp(part.offset,foffset);
 
+#ifdef REORIENT_TREAD
       //   4.  Rotate the arc part in the X/Y plane based on the first
       //       constraint's offset (for things like technic turntable top,
       //       where the gear plane does not go through the origin.)
 
-      vectoradd(part.offset,band_constraints[f_constraint->band_constraint_n].offset);
+      vectorsub(part.offset,band_constraints[f_constraint->band_constraint_n].offset);
 
       //   5.  Orient arc part based on the orientation of the first
       //       constraint's orientation (for things like technic turntable
@@ -869,6 +960,7 @@ int draw_arc_line(
 
       matrixcp(tm,part.orient);
       matrixmult3(part.orient,absolute->orient,tm);
+#endif // REORIENT_TREAD
 
       output_line(
         output,
@@ -1049,6 +1141,12 @@ synth_band(
     }
   }
 
+#ifdef USE_TURN_ANGLE 
+  if (n_constraints == 1) {
+    constraints[first].layer        = -2; // Mark this as the ONLY constraint.
+  }
+#endif
+
   /* create an extra constraint that represents the final state of the
    * first pulley */
   if (band_type->pulley == 0) {
@@ -1091,16 +1189,39 @@ synth_band(
 
   //showconstraints(output,constraints,n_constraints,15);
 
-  /* 4. offset constraint's who's gear plane does not intersect with the
-   *    origin.
+  /* 4. Now that the whole assembly is in AN the X/Y plane, move everything
+   *    so the center of the axle of the first constraint is at the origin.
+   *    With the current list of band constraints that means maybe adjusting 
+   *    the Z Coordinates.
    */
 
   for (i = 0; i < n_constraints; i++) {
     if (constraints[i].radius) {
-      vectorsub(constraints[i].part.offset,
-        band_constraints[constraints[i].band_constraint_n].offset);
+      vectoradd(constraints[i].part.offset, //was vectorsub()
+        band_constraints[constraints[first].band_constraint_n].offset);
     }
   }
+
+#if 0
+  /* 5. Offset constraints that were not modeled at the orgin (or on an axis).
+   *    
+   *    At this point we can assume all constraint centers are in THE X/Y plane
+   *    at Z=0.  However the part origins may need to be moved in X and/or Y 
+   *    if for some reason the part was not modeled symmetrically about either 
+   *    the X, Y, or Z axis.   Do not change the Z at this point.  
+   *    And skip the first constraint because we already did it above (step 4).
+   *    
+   *    Do not undo this step in the final reorient code.  It's one way.
+   */
+
+  for (i = 1; i < n_constraints; i++) { // Start at constraint 1, not 0.
+    if (constraints[i].radius) {
+      vectoradd(constraints[i].part.offset,
+        band_constraints[constraints[i].band_constraint_n].offset);
+      constraints[i].part.offset[2] = 0; // Set Z to zero, just in case.
+    }
+  }
+#endif
 
   //***************************************************************************
   //NOTE: This dies if I use only constraints  NOT listed as band constraints.
@@ -1109,6 +1230,16 @@ synth_band(
   //***************************************************************************
 
   fflush(output);
+#ifdef DEBUGGING_FIXED3_BANDS
+  for (i = 0; i < n_constraints; i++) {
+    if (constraints[i].radius) {
+      printf("constraint[%d] = (%d, %d, %d)\n", i, 
+	     (int)constraints[i].part.offset[0], 
+	     (int)constraints[i].part.offset[1], 
+	     (int)constraints[i].part.offset[2] );
+    }
+  }
+#endif
 #ifdef SHOW_XY_PLANE_FOR_DEBUG
   showconstraints(output,constraints,n_constraints,3);
 #endif
