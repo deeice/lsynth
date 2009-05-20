@@ -23,6 +23,7 @@
 0 !HISTORY 2009-05-06 [Don M. Heyse]   Fixed singular matrix on constraint 57520.dat.
 0 !HISTORY 2009-05-07 [Don M. Heyse]   Fixed constraint offsets on TECHNIC_CHAIN_TREAD_38.
 0 !HISTORY 2009-05-09 [Don M. Heyse]   Fixed constraint offsets on 57520 & 6628.
+0 !HISTORY 2009-05-15 [Willy Tschager] Added LS09.dat - RCX cable constraint
 0 //
 0 //
 0 //
@@ -74,6 +75,7 @@
 0 //    <a> thru <i> reserved for future use.
 0 //    <part>       name of LDraw part used as a constraint.
 0 //
+0 //
 0 // The format for defining a new type of HOSE is:
 0 //
 0 //  0 SYNTH BEGIN DEFINE <hose_type> HOSE <fill> <diameter> <stiffness> <twist>
@@ -112,6 +114,28 @@
 0 //    <a> thru <i> these are the orientations used to make all the start,
 0 //                 mid, and end parts all have the same orientation in the
 0 //                 synthesis process.
+0 //
+0 //
+0 //  The format for describing BAND constraints is:
+0 //
+0 //  0 SYNTH BEGIN DEFINE BAND CONSTRAINTS
+0 //  1 <radius> <x> <y> <z> <a> <b> <c> <d> <e> <f> <g> <h> <i> <part>
+0 //  0 SYNTH END
+0 //
+0 //    <radius>     this describes the radius of the constraint <part>.
+0 //    <x> <y> <z>  these are x,y and z offsets used to properly place
+0 //                 arc parts that wrap around the constraint.  Typlically
+0 //                 only <z> used
+0 //    <a> thru <i> these are used to orient all constraints' gear\pulley
+0 //                 planes into the same orientation.  The technic 
+0 //                 turntable's gear plane is not parallel to the technic
+0 //                 gear family plane, so <a> thru <i> are used to rotate
+0 //                 technic turntables into the same orientation as gears.
+0 //                 Once rotated, technic turntable's gear plane is parallel
+0 //                 but not coincident to the technic gear plane.  Applying
+0 //                 <x> <y> <z> to the turntable part makes the gear plane
+0 //                 coincident with the technic gear plane.
+0 //    <part>       this is the name of the ldraw part used as a constraint.
 0 //
 0 //
 0 // The format for defining a new type of BAND is:
@@ -156,26 +180,6 @@
 0 // from tangent to arc, and arc to tangent.  Currently these are only used
 0 // for RUBBER_TREAD.
 0 //
-0 //  The format for describing BAND constraints is:
-0 //
-0 //  0 SYNTH BEGIN DEFINE BAND CONSTRAINTS
-0 //  1 <radius> <x> <y> <z> <a> <b> <c> <d> <e> <f> <g> <h> <i> <part>
-0 //  0 SYNTH END
-0 //
-0 //    <radius>     this describes the radius of the constraint <part>.
-0 //    <x> <y> <z>  these are x,y and z offsets used to properly place
-0 //                 arc parts that wrap around the constraint.  Typlically
-0 //                 only <z> used
-0 //    <a> thru <i> these are used to orient all constraints' gear planeS\
-0 //                 pulley planes into the same orientation.  Technic
-0 //                 turntable's gear plane is not parallel to the technic
-0 //                 gear family plane, so <a> thru <i> are used to rotate
-0 //                 technic turntables into the same orientation as gears.
-0 //                 Once rotated, technic turntable's gear plane is parallel
-0 //                 but not coincident to the technic gear plane.  Applying
-0 //                 <x> <y> <z> to the turntable part makes the gear plane
-0 //                 coincident with the technic gear plane.
-0 //    <part>       this is the name of the ldraw part used as a constraint.
 0 //
 0 // Below are the actual descriptions of constraints, hoses and bands.
 0 //
@@ -206,7 +210,7 @@
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS07.dat
 0 // LSynth Constraint Part - Type 8 - "Chain End"
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS08.dat
-0 // LSynth Constraint Part - Type 8 - "Brick Arc"
+0 // LSynth Constraint Part - Type 9 - "RCX Cable"
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS09.dat
 0 SYNTH END
 0 
@@ -273,6 +277,10 @@
 1 71 0 0 9 1 0 0 0 0 1 0 -1 0 2855.DAT
 0 // Technic Wedge Belt Wheel
 1 29 0 0 0 1 0 0 0 1 0 0 0 1 4185.DAT
+0 // Wheel Center Large
+1 20 0 0 0 1 0 0 0 1 0 0 0 1 3482.DAT
+0 // Wheel Center Spoked Small
+1 20 0 0 0 1 0 0 0 1 0 0 0 1 30155.DAT
 0 // LSynth Hose Constraint Part - Type 1
 1 1 0 0 0 0 0 -1 0 1 0 1 0 0 LS01.dat
 0 // LSynth Hose Constraint Part - Type 2
@@ -309,11 +317,11 @@
 0 Unofficial Model
 0 SYNTH BEGIN DEFINE ELECTRIC_NXT_CABLE HOSE STRETCH 9 35 0
 0 // LSynth Electric Cable Segment NXT
-1 0 0 0 0 0 0 9 0 1 0 -2 0 0 S/LS11.dat
+1 0 0 0 0 0 0 9 0 1 0 -2 0 0 LS11.dat
 0 // LSynth Electric Cable Segment NXT
-1 0 0 0 0 0 0 9 0 1 0 -2 0 0 S/LS11.dat
+1 0 0 0 0 0 0 9 0 1 0 -2 0 0 LS11.dat
 0 // LSynth Electric Cable Segment NXT
-1 0 0 0 0 0 0 9 0 1 0 -2 0 0 S/LS11.dat
+1 0 0 0 0 0 0 9 0 1 0 -2 0 0 LS11.dat
 0 SYNTH END
 0 
 0
@@ -324,11 +332,11 @@
 0 Unofficial Model
 0 SYNTH BEGIN DEFINE ELECTRIC_POWER_FUNCTIONS_CABLE HOSE STRETCH 9 35 0
 0 // LSynth Electric Cable Segment NXT
-1 0 0 0 0 0 0 1 0 1 0 -1 0 0 S/LS70.dat
+1 0 0 0 0 0 0 1 0 1 0 -1 0 0 LS70.dat
 0 // LSynth Electric Cable Segment NXT
-1 0 0 0 0 0 0 1 0 1 0 -1 0 0 S/LS70.dat
+1 0 0 0 0 0 0 1 0 1 0 -1 0 0 LS70.dat
 0 // LSynth Electric Cable Segment NXT
-1 0 0 0 0 0 0 1 0 1 0 -1 0 0 S/LS70.dat
+1 0 0 0 0 0 0 1 0 1 0 -1 0 0 LS70.dat
 0 SYNTH END
 0 
 0
@@ -339,11 +347,11 @@
 0 Unofficial Model
 0 SYNTH BEGIN DEFINE ELECTRIC_RCX_CABLE HOSE STRETCH 9 20 0
 0 // LSynth Electric Cable Segment
-1 0 0 0 0 0 0 -1 0 1 0 1 0 0 S\LS10.dat
+1 0 0 0 0 0 0 -1 0 1 0 1 0 0 LS10.dat
 0 // LSynth Electric Cable Segment
-1 0 0 0 0 0 0 -1 0 1 0 1 0 0 S\LS10.dat
+1 0 0 0 0 0 0 -1 0 1 0 1 0 0 LS10.dat
 0 // LSynth Electric Cable Segment
-1 0 0 0 0 0 0 -1 0 1 0 1 0 0 S\LS10.dat
+1 0 0 0 0 0 0 -1 0 1 0 1 0 0 LS10.dat
 0 SYNTH END
 0 
 0
@@ -356,7 +364,7 @@
 1 0 0 0 0 2 0 0 0 1 0 0 0 2 4-4cyli.dat
 1 0 0 0 0 2 0 0 0 1 0 0 0 2 4-4cyli.dat
 0 // LSynth Electric Technic Fiber Optics - End Piece
-1 28 0 0 0 1 0 0 0 1 0 0 0 1 S\LS30.dat
+1 28 0 0 0 1 0 0 0 1 0 0 0 1 LS30.dat
 0 SYNTH END
 0 
 0
@@ -396,9 +404,9 @@
 0 Author: Kevin L. Clague
 0 Unofficial Model
 0 SYNTH BEGIN DEFINE STRING_HOSE HOSE FIXED 2 10 0
-1 0 0 0 2 1 0 0 0 0 1 0 -1 0 S\LS60.dat
-1 2 0 0 2 1 0 0 0 0 1 0 -1 0 S\LS60.dat
-1 0 0 0 2 1 0 0 0 0 1 0 -1 0 S\LS60.dat
+1 0 0 0 2 1 0 0 0 0 1 0 -1 0 LS60.dat
+1 2 0 0 2 1 0 0 0 0 1 0 -1 0 LS60.dat
+1 0 0 0 2 1 0 0 0 0 1 0 -1 0 LS60.dat
 0 SYNTH END
 0 
 0
@@ -409,11 +417,11 @@
 0 Unofficial Model
 0 SYNTH BEGIN DEFINE TECHNIC_AXLE_FLEXIBLE HOSE STRETCH 12 40 0
 0 // LSynth Technic Flexible Axle - End Piece
-1 40 0 -40 0 1 0 0 0 -1 0 0 0 1 s\LS40.dat
+1 40 0 -40 0 1 0 0 0 -1 0 0 0 1 LS40.dat
 0 // LSynth Technic Flexible Axle - Cross Section
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 s\LS41.dat
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS41.dat
 0 // LSynth Technic Flexible Axle - End Piece
-1 40 0 0 0 1 0 0 0 1 0 0 0 1 s\LS40.dat
+1 40 0 0 0 1 0 0 0 1 0 0 0 1 LS40.dat
 0 SYNTH END
 0 
 0
@@ -426,7 +434,7 @@
 0 // Technic Flex-System Cable End
 1 20 0 20 0 1 0 0 0 1 0 0 0 1 342.DAT
 0 // LSynth Electric Cable Segment NXT
-1 0 0 0 0 2 0 0 0 1 0 0 0 2 S/LS11.dat
+1 0 0 0 0 2 0 0 0 1 0 0 0 2 LS11.dat
 0 // Technic Flex-System Cable End
 1 20 0 0 0 1 0 0 0 -1 0 0 0 1 342.DAT
 0 SYNTH END
@@ -438,9 +446,9 @@
 0 Author: Kevin L. Clague
 0 Unofficial Model
 0 SYNTH BEGIN DEFINE TECHNIC_FLEX-SYSTEM_HOSE HOSE STRETCH 6 40 0
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 S\LS50.dat
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 S\LS51.dat
-1 0 0 -1 0 1 0 0 0 -1 0 0 0 1 S\LS50.dat
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS50.dat
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS51.dat
+1 0 0 -1 0 1 0 0 0 -1 0 0 0 1 LS50.dat
 0 SYNTH END
 0 
 0
@@ -451,11 +459,11 @@
 0 Unofficial Model
 0 SYNTH BEGIN DEFINE TECHNIC_PNEUMATIC_HOSE HOSE STRETCH 12 30 0
 0 // LSynth Technic Pneumatic Hose - End Piece
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 S\LS20.dat
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS20.dat
 0 // LSynth Technic Pneumatic Hose - Cross Section
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 S\LS21.dat
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS21.dat
 0 // LSynth Technic Pneumatic Hose - End Piece
-1 0 0 -1 0 1 0 0 0 -1 0 0 0 1 S\LS20.dat
+1 0 0 -1 0 1 0 0 0 -1 0 0 0 1 LS20.dat
 0 SYNTH END
 0 
 0
@@ -483,8 +491,8 @@
 0 Author: Kevin L. Clague
 0 Unofficial Model
 0 SYNTH BEGIN DEFINE RUBBER_BAND BAND STRETCH 2 1
-1 0 0 0 0 2 0 0 0 1 0 0 0 2 S/LS11.dat
-1 0 0 0 0 2 0 0 0 1 0 0 0 2 S/LS11.dat
+1 0 0 0 0 2 0 0 0 1 0 0 0 2 LS11.dat
+1 0 0 0 0 2 0 0 0 1 0 0 0 2 LS11.dat
 0 SYNTH END
 0 
 0
@@ -494,8 +502,8 @@
 0 Author: Kevin L. Clague
 0 Unofficial Model
 0 SYNTH BEGIN DEFINE RUBBER_BELT BAND STRETCH 2 1
-1 0 0 0 0 1.41421 0 1.41421 0 1 0 -1.41421 0 1.41421 box.dat
-1 0 0 0 0 1.41421 0 1.41421 0 1 0 -1.41421 0 1.41421 box.dat
+1 0 0 -1 0 1 0 0 0 0.5 0 0 0 5 box.dat
+1 0 0 -1 0 1 0 0 0 0.5 0 0 0 5 box.dat
 0 SYNTH END
 0 
 0
@@ -505,8 +513,8 @@
 0 Author: Willy Tschager
 0 Unofficial Model
 0 SYNTH BEGIN DEFINE STRING_BAND BAND FIXED 0.55 1
-1 0 0 0 0 1 0 0 0 0 1 0 -1 0 S/LS60.dat
-1 0 0 0 0 1 0 0 0 0 1 0 -1 0 S/LS60.dat
+1 0 0 0 0 1 0 0 0 0 1 0 -1 0 LS60.dat
+1 0 0 0 0 1 0 0 0 0 1 0 -1 0 LS60.dat
 0 SYNTH END
 0 
 0
@@ -585,11 +593,11 @@
 0 Unofficial Model
 0 SYNTH BEGIN DEFINE ELECTRIC_CABLE HOSE STRETCH 9 20 0
 0 // LSynth Electric Cable Segment
-1 0 0 0 0 0 0 -1 0 1 0 1 0 0 S\LS10.dat
+1 0 0 0 0 0 0 -1 0 1 0 1 0 0 LS10.dat
 0 // LSynth Electric Cable Segment
-1 0 0 0 0 0 0 -1 0 1 0 1 0 0 S\LS10.dat
+1 0 0 0 0 0 0 -1 0 1 0 1 0 0 LS10.dat
 0 // LSynth Electric Cable Segment
-1 0 0 0 0 0 0 -1 0 1 0 1 0 0 S\LS10.dat
+1 0 0 0 0 0 0 -1 0 1 0 1 0 0 LS10.dat
 0 SYNTH END
 0 
 0
@@ -602,7 +610,7 @@
 1 0 0 0 0 2 0 0 0 1 0 0 0 2 4-4cyli.dat
 1 0 0 0 0 2 0 0 0 1 0 0 0 2 4-4cyli.dat
 0 // LSynth Electric Technic Fiber Optics - End Piece
-1 28 0 0 0 1 0 0 0 1 0 0 0 1 S\LS30.dat
+1 28 0 0 0 1 0 0 0 1 0 0 0 1 LS30.dat
 0 SYNTH END
 0 
 0
@@ -613,11 +621,11 @@
 0 Unofficial Model
 0 SYNTH BEGIN DEFINE FLEXIBLE_AXLE HOSE STRETCH 12 40 0
 0 // LSynth Technic Flexible Axle - End Piece
-1 40 0 -40 0 1 0 0 0 -1 0 0 0 1 s\LS40.dat
+1 40 0 -40 0 1 0 0 0 -1 0 0 0 1 LS40.dat
 0 // LSynth Technic Flexible Axle - Cross Section
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 s\LS41.dat
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS41.dat
 0 // LSynth Technic Flexible Axle - End Piece
-1 40 0 0 0 1 0 0 0 1 0 0 0 1 s\LS40.dat
+1 40 0 0 0 1 0 0 0 1 0 0 0 1 LS40.dat
 0 SYNTH END
 0 
 0
@@ -630,7 +638,7 @@
 0 // Technic Flex-System Cable End
 1 20 0 20 0 1 0 0 0 1 0 0 0 1 342.DAT
 0 // LSynth Electric Cable Segment NXT
-1 0 0 0 0 2 0 0 0 1 0 0 0 2 S/LS11.dat
+1 0 0 0 0 2 0 0 0 1 0 0 0 2 LS11.dat
 0 // Technic Flex-System Cable End
 1 20 0 0 0 1 0 0 0 -1 0 0 0 1 342.DAT
 0 SYNTH END
@@ -642,9 +650,9 @@
 0 Author: Kevin L. Clague
 0 Unofficial Model
 0 SYNTH BEGIN DEFINE FLEX_SYSTEM_HOSE HOSE STRETCH 6 40 0
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 S\LS50.dat
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 S\LS51.dat
-1 0 0 -1 0 1 0 0 0 -1 0 0 0 1 S\LS50.dat
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS50.dat
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS51.dat
+1 0 0 -1 0 1 0 0 0 -1 0 0 0 1 LS50.dat
 0 SYNTH END
 0 
 0
@@ -668,11 +676,11 @@
 0 Unofficial Model
 0 SYNTH BEGIN DEFINE PNEUMATIC_HOSE HOSE STRETCH 12 30 0
 0 // LSynth Technic Pneumatic Hose - End Piece
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 S\LS20.dat
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS20.dat
 0 // LSynth Technic Pneumatic Hose - Cross Section
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 S\LS21.dat
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS21.dat
 0 // LSynth Technic Pneumatic Hose - End Piece
-1 0 0 -1 0 1 0 0 0 -1 0 0 0 1 S\LS20.dat
+1 0 0 -1 0 1 0 0 0 -1 0 0 0 1 LS20.dat
 0 SYNTH END
 0 
 0
