@@ -298,8 +298,9 @@ merge_segments_count(
     vectorsub3(d,segments[i].offset,segments[i+1].offset);
     len += vectorlen(d);
   }
-  len /= (count);
-  //printf("Merging segments to %d segments of len %.3f\n", count, len);
+  // printf("Total segment len = %.3f\n", len);
+  len = len / (PRECISION)(count-1); //len /= (count);
+  // printf("Merging %d segments to %d segments of len %.3f\n", *n_segments, count, len);
 
   // Break up the curve into count intervals of length len.
   l = 0;
@@ -309,14 +310,17 @@ merge_segments_count(
     vectorsub3(d,segments[i].offset,segments[i+1].offset);
     l += vectorlen(d);
     
-    if ((l + 0.5) > (n * len))
+    if ((l + 0.05) > (n * len))
       segments[n++] = segments[i+1];
 
     //if (n >= count) break;
   }
-  segments[n] = segments[*n_segments]; // Keep the last point.
+  //segments[n-1] = segments[*n_segments-1]; // Use the last point twice?
+  segments[n++] = segments[*n_segments-1]; // Keep the last point.
 
   *n_segments = n;
+
+  // printf("Produced %d points (%d segments)\n", *n_segments, *n_segments-1);
 
   // Reorient the segments.  
   // Warning!  Can interact badly with twist if hose makes a dx/dz (dy=0) turn.
@@ -757,6 +761,8 @@ render_hose(
     adjust_constraint(&second, &constraints[n_constraints-1],1);
 
     n_segments *= c;
+    // Make sure final segment matches second constraint
+    vectorcp(segments[n_segments-1].offset,second.offset);
     merge_segments_count(seglist,&n_segments,hose->fill,output);
     //printf("Merged segments to %d segments of len %d\n", n_segments, hose->mid.attrib);
     //orient(&first,&second,n_segments,seglist);

@@ -24,6 +24,7 @@
 0 !HISTORY 2009-05-07 [Don M. Heyse]   Fixed constraint offsets on TECHNIC_CHAIN_TREAD_38.
 0 !HISTORY 2009-05-09 [Don M. Heyse]   Fixed constraint offsets on 57520 & 6628.
 0 !HISTORY 2009-05-15 [Willy Tschager] Added LS09.dat - RCX cable constraint
+0 !HISTORY 2009-06-08 [Don M. Heyse]   Added LS209.dat and fixed MINIFIG_CHAIN.
 0 //
 0 //
 0 //
@@ -212,6 +213,8 @@
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS08.dat
 0 // LSynth Constraint Part - Type 9 - "RCX Cable"
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS09.dat
+0 // LSynth Constraint Part - Type 10 - "Chain Link"
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS209.dat
 0 SYNTH END
 0 
 0
@@ -289,6 +292,8 @@
 1 1 0 0 0 0 0 -1 0 1 0 1 0 0 LS03.dat
 0 // LSynth Hose Constraint Part - Type 4
 1 1 0 0 0 0 0 -1 0 1 0 1 0 0 LS04.dat
+0 // Technic Small Tread Wheel
+1 24 0 0 0 1 0 0 0 1 0 0 0 1 30285.DAT
 0 SYNTH END
 0 
 0 
@@ -382,19 +387,19 @@
 1 0 0 6 0 1 0 0 0 1 0 0 0 1 755.DAT
 0 SYNTH END
 0 
-0
+0 
 0 FILE MINIFIG_CHAIN.ldr
 0 MINIFIG_CHAIN SYNTHESIS DEFINITION
 0 Name: MINIFIG_CHAIN.ldr
 0 Author: Kevin L. Clague
 0 Unofficial Model
-0 SYNTH BEGIN DEFINE MINIFIG_CHAIN HOSE FIXED23 2 40 90
-0 // Minifig Chain End Piece
-1 0 0 0 0 0 -1 0 0 0 1 -1 0 0 208.DAT
+0 SYNTH BEGIN DEFINE MINIFIG_CHAIN HOSE FIXED21 2 40 90
 0 // Minifig Chain Link
-1 14 0 14 0 0 0 -1 0 1 0 1 0 0 209.DAT
-0 // Minifig Chain End Piece
-1 0 0 0 -12 0 1 0 0 0 -1 -1 0 0 208.DAT
+1 14 0 0 0 1 0 0 0 1 0 0 0 1 209.dat
+0 // Minifig Chain Link
+1 14 0 0 0 1 0 0 0 1 0 0 0 1 209.dat
+0 // Minifig Chain Link
+1 14 0 0 0 1 0 0 0 1 0 0 0 1 209.dat
 0 SYNTH END
 0 
 0
