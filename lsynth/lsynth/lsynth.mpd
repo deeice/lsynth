@@ -395,11 +395,11 @@
 0 Unofficial Model
 0 SYNTH BEGIN DEFINE MINIFIG_CHAIN HOSE FIXED21 2 40 90
 0 // Minifig Chain Link
-1 14 0 0 0 1 0 0 0 1 0 0 0 1 209.dat
+1 14 0 9 0 1 0 0 0 1 0 0 0 1 209.dat
 0 // Minifig Chain Link
-1 14 0 0 0 1 0 0 0 1 0 0 0 1 209.dat
+1 14 0 9 0 1 0 0 0 1 0 0 0 1 209.dat
 0 // Minifig Chain Link
-1 14 0 0 0 1 0 0 0 1 0 0 0 1 209.dat
+1 14 0 9 0 1 0 0 0 1 0 0 0 1 209.dat
 0 SYNTH END
 0 
 0
