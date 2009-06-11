@@ -25,6 +25,7 @@
 0 !HISTORY 2009-05-09 [Don M. Heyse]   Fixed constraint offsets on 57520 & 6628.
 0 !HISTORY 2009-05-15 [Willy Tschager] Added LS09.dat - RCX cable constraint
 0 !HISTORY 2009-06-08 [Don M. Heyse]   Added LS209.dat and fixed MINIFIG_CHAIN.
+0 !HISTORY 2009-06-08 [Don M. Heyse]   Reworked FLEXIBLE_HOSE like the MINIFIG_CHAIN.
 0 //
 0 //
 0 //
@@ -108,8 +109,12 @@
 0 //                 used only once.
 0 //    mid_part     this part is used to synthesize the bulk of the hose.
 0 //    <len>        this describes the length associated with fixed length
-0 //                 parts.This can also be used on the start_part and/or
-0 //                 the end_part of a STRETCH hose.
+0 //                 parts.  This can also be used on the start_part and/or
+0 //                 the end_part of a STRETCH hose.  For a FIXED-N hose, if
+0 //                 the start_part, the end_part, or their <len> parameters are 
+0 //                 not the same as the mid_part then they are not included in
+0 //                 the N count of identical fixed parts, and are positioned 
+0 //                 exactly on the start/end constraints.  (eg. HOSE_FLEXIBLE)
 0 //    <x> <y> <z>  these are used to offset synthesis components as part of
 0 //                 the final synthesis process of placing parts in 3D space.
 0 //    <a> thru <i> these are the orientations used to make all the start,
@@ -378,13 +383,14 @@
 0 Name: HOSE_FLEXIBLE.ldr
 0 Author: Kevin L. Clague
 0 Unofficial Model
+0 // End sections are different size/shape and not included in the 50 count.
 0 SYNTH BEGIN DEFINE HOSE_FLEXIBLE HOSE FIXED50 1 30 0
 0 // Hose Flexible Segment End Section
-1 0 0 6 0 1 0 0 0 -1 0 0 0 1 755.DAT
+1 7 0 0 0 1 0 0 0 1 0 0 0 1 755.DAT
 0 // Hose Flexible Segment Center Section
 1 4 0 0 0 1 0 0 0 1 0 0 0 1 756.DAT
 0 // Hose Flexible Segment End Section
-1 0 0 6 0 1 0 0 0 1 0 0 0 1 755.DAT
+1 5 0 0 0 1 0 0 0 -1 0 0 0 1 755.DAT
 0 SYNTH END
 0 
 0 
@@ -711,11 +717,11 @@
 0 Unofficial Model
 0 SYNTH BEGIN DEFINE RIGID_HOSE HOSE FIXED50 1 30 0
 0 // Hose Flexible Segment End Section
-1 0 0 6 0 1 0 0 0 -1 0 0 0 1 755.DAT
+1 7 0 0 0 1 0 0 0 1 0 0 0 1 755.DAT
 0 // Hose Flexible Segment Center Section
 1 4 0 0 0 1 0 0 0 1 0 0 0 1 756.DAT
 0 // Hose Flexible Segment End Section
-1 0 0 6 0 1 0 0 0 1 0 0 0 1 755.DAT
+1 5 0 0 0 1 0 0 0 -1 0 0 0 1 755.DAT
 0 SYNTH END
 0 
 0
@@ -726,11 +732,11 @@
 0 Unofficial Model
 0 SYNTH BEGIN DEFINE RUBBER_HOSE HOSE FIXED50 1 30 0
 0 // Hose Flexible Segment End Section
-1 0 0 6 0 1 0 0 0 -1 0 0 0 1 755.DAT
+1 7 0 0 0 1 0 0 0 1 0 0 0 1 755.DAT
 0 // Hose Flexible Segment Center Section
 1 4 0 0 0 1 0 0 0 1 0 0 0 1 756.DAT
 0 // Hose Flexible Segment End Section
-1 0 0 6 0 1 0 0 0 1 0 0 0 1 755.DAT
+1 5 0 0 0 1 0 0 0 -1 0 0 0 1 755.DAT
 0 SYNTH END
 0 
 0
