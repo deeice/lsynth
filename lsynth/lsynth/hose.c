@@ -299,7 +299,7 @@ merge_segments_count(
     vectorsub3(d,segments[i].offset,segments[i+1].offset);
     len += vectorlen(d);
   }
-  //printf("Total segment len = %.3f\n", len);
+  printf("Total segment len = %.3f\n", len);
 
   // If S or E do not match the N parts subtract their lengths from total.
   if ((strcasecmp(hose->start.type, hose->mid.type) != 0) ||
@@ -311,7 +311,7 @@ merge_segments_count(
     lenE = hose->end.attrib;
     lenM = hose->mid.attrib;
     len = len - (lenS + lenE);
-    //printf("Net segment len = %.3f (S=%d, M=%d, E= %d)\n", len, lenS, lenM, lenE);
+    printf("Net segment len = %.3f (S=%d, M=%d, E= %d)\n", len, lenS, lenM, lenE);
     len = len / (PRECISION)(count-1); //len /= (count);
   }
   else
@@ -319,7 +319,7 @@ merge_segments_count(
     len = len / (PRECISION)(count-1); //len /= (count);
     lenS = lenE = len;
   }
-  //printf("Merging %d segments to %d segments of len %.3f\n", *n_segments, count, len);
+  printf("Merging %d segments to %d segments of len %.3f\n", *n_segments, count, len);
 
   // Break up the curve into count intervals of length len.
   l = 0;
@@ -343,7 +343,7 @@ merge_segments_count(
 
   *n_segments = n;
 
-  //printf("Produced %d points (%d segments)\n", *n_segments, *n_segments-1);
+  printf("Produced %d points (%d segments)\n", *n_segments, *n_segments-1);
 
   // Reorient the segments.  
   // Warning!  Can interact badly with twist if hose makes a dx/dz (dy=0) turn.
@@ -482,6 +482,11 @@ render_hose_segment(
 	matrixcp(m2,hose->end.orient);
       else // Stretch it.
 	matrixmult3(m2,hose->end.orient,m1);
+    } else if ((i & 0x01) && (strlen(hose->alt.type) != 0)) {
+      if (i == 1) printf("ALT = %s\n", hose->alt.type);
+      type = hose->alt.type;
+      vectorcp(offset,hose->alt.offset);
+      matrixmult3(m2,hose->alt.orient,m1);
     } else {
       type = hose->mid.type;
       vectorcp(offset,hose->mid.offset);

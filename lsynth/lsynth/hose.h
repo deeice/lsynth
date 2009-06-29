@@ -19,6 +19,7 @@ typedef struct {
   part_t    start;        // LDraw part for start of hose
   part_t    mid;          // LDraw part for mid section
   part_t    end;          // LDraw part for end of hose
+  part_t    alt;          // LDraw part alternate for mid of hose
 } hose_attrib_t;
 
 extern hose_attrib_t hose_types[];

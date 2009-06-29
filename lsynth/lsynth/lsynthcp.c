@@ -188,6 +188,7 @@ parse_descr(char *fullpath_progname)
     char product[126], nickname[128], method[128];
     int  d,st,i;
     PRECISION s,t;
+    int got_end = 0;
 
     strclean(line);
 
@@ -253,17 +254,39 @@ parse_descr(char *fullpath_progname)
         }
       }
 
-      if (fgetline(line,sizeof(line),mpd)) {
-        if (strcasecmp(line,"0 SYNTH END\n") != 0) {
-          printf("Error: Expected SYNTH END, got this instead\n");
-          printf(line);
-          fclose(mpd);
-          return -1;
-        }
-      } else {
-        printf("Error: Unexepcted end of file\n");
-        fclose(mpd);
-        return -1;
+      // Assume no alternate mid part.
+      strcpy(hose_types[n_hose_types].alt.type, "");
+
+      got_end = 0;
+      while (fgetline(line,sizeof(line),mpd)) {
+	part_t *part;
+	int n;
+
+        if (strcasecmp(line,"0 SYNTH END\n") == 0) {
+	  got_end = 1;
+	  break;
+	}
+
+	// Look for an alternate mid part
+	part = &hose_types[n_hose_types].alt;
+	
+	n = sscanf(line,"1 %d %f %f %f %f %f %f %f %f %f %f %f %f %s\n",
+                &part->attrib,
+                &part->offset[0],    &part->offset[1],    &part->offset[2],
+                &part->orient[0][0], &part->orient[0][1], &part->orient[0][2],
+                &part->orient[1][0], &part->orient[1][1], &part->orient[1][2],
+                &part->orient[2][0], &part->orient[2][1], &part->orient[2][2],
+                 part->type);
+
+	if (n != 14)
+	  strcpy(hose_types[n_hose_types].alt.type, ""); // Skip comments
+	else
+	  printf("Found HOSE alt segment %s\n", hose_types[n_hose_types].alt.type);
+      }
+      if ( ! got_end) {
+	printf("Error: Unexepcted end of file\n");
+	fclose(mpd);
+	return -1;
       }
       n_hose_types++;
     } else if (strcasecmp(line,"0 SYNTH BEGIN DEFINE HOSE CONSTRAINTS\n") == 0) {
@@ -943,7 +966,7 @@ int main(int argc, char* argv[])
     exit(0);
   }
 
-  printf("LSynth version 3.1 beta B by Kevin Clague, kevin_clague@yahoo.com\n");
+  printf("LSynth version 3.1 beta C by Kevin Clague, kevin_clague@yahoo.com\n");
   printf("                   and Don Heyse\n");
 
   if (argc == 2 && strcasecmp(argv[1],"-v") == 0) {

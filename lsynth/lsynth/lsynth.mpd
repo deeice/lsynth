@@ -4,6 +4,8 @@
 0 Author: Kevin L. Clague
 0 !LDRAW_ORG Unofficial Model
 0 //
+0 !VERSION 3.1
+0 //
 0 !HISTORY 2007-03-28 [Willy Tschager] Streamlined stiffness in various definitions, added hose constraints
 0 !HISTORY 2007-03-28 [Don M. Heyse]   Minifig Chain updates.
 0 !HISTORY 2007-04-17 [Don M. Heyse]   Added offset -1Y to PNEUMATIC_HOSE, FLEX_SYSTEM_HOSE end_parts. Added -1Y to RUBBER_HOSE start_part.
@@ -26,6 +28,7 @@
 0 !HISTORY 2009-05-15 [Willy Tschager] Added LS09.dat - RCX cable constraint
 0 !HISTORY 2009-06-08 [Don M. Heyse]   Added LS209.dat and fixed MINIFIG_CHAIN.
 0 !HISTORY 2009-06-08 [Don M. Heyse]   Reworked FLEXIBLE_HOSE like the MINIFIG_CHAIN.
+0 !HISTORY 2009-06-22 [Willy Tschager] Removed LS209.dat. Added FIBER_OPTICS_CABLE_WIDE and !VERSION 
 0 //
 0 //
 0 //
@@ -120,6 +123,8 @@
 0 //    <a> thru <i> these are the orientations used to make all the start,
 0 //                 mid, and end parts all have the same orientation in the
 0 //                 synthesis process.
+0 // For HOSEs with the FIXED fill type an alternate mid part can optionally
+0 // be declared after the end_part.  See MINIFIG_STRING_WITH_GRIPS_21L.
 0 //
 0 //
 0 //  The format for describing BAND constraints is:
@@ -212,14 +217,12 @@
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS05.dat
 0 // LSynth Constraint Part - Type 6 - "Power Functions Cable"
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS06.dat
-0 // LSynth Constraint Part - Type 7 - "Chain Start"
+0 // LSynth Constraint Part - Type 7 - "Minifig Chain Link"
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS07.dat
-0 // LSynth Constraint Part - Type 8 - "Chain End"
+0 // LSynth Constraint Part - Type 8 - "Minifig String"
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS08.dat
 0 // LSynth Constraint Part - Type 9 - "RCX Cable"
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS09.dat
-0 // LSynth Constraint Part - Type 10 - "Chain Link"
-1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS209.dat
 0 SYNTH END
 0 
 0
@@ -378,6 +381,20 @@
 0 SYNTH END
 0 
 0
+0 FILE FIBER_OPTICS_CABLE_WIDE.ldr
+0 FIBER_OPTICS_CABLE_WIDE SYNTHESIS DEFINITION
+0 Name: FIBER_OPTICS_CABLE_WIDE.ldr
+0 Author: Philippe Hurbain [Philo]
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE FIBER_OPTICS_CABLE_WIDE HOSE STRETCH 8 50 0
+0 ROTATION CENTER 0 0 0 1 "Custom"
+0 ROTATION CONFIG 0 0
+1 0 0 0 0 4 0 0 0 1 0 0 0 4 LS11.dat
+1 0 0 0 0 4 0 0 0 1 0 0 0 4 4-4cyli.dat
+1 0 0 0 0 4 0 0 0 1 0 0 0 4 LS11.dat
+0 SYNTH END
+0
+0
 0 FILE HOSE_FLEXIBLE.ldr
 0 HOSE_FLEXIBLE SYNTHESIS DEFINITION
 0 Name: HOSE_FLEXIBLE.ldr
@@ -394,18 +411,95 @@
 0 SYNTH END
 0 
 0 
-0 FILE MINIFIG_CHAIN.ldr
-0 MINIFIG_CHAIN SYNTHESIS DEFINITION
-0 Name: MINIFIG_CHAIN.ldr
+0 FILE MINIFIG_CHAIN_16L.ldr
+0 MINIFIG_CHAIN_16L SYNTHESIS DEFINITION
+0 Name: MINIFIG_CHAIN_16L.ldr
 0 Author: Kevin L. Clague
 0 Unofficial Model
-0 SYNTH BEGIN DEFINE MINIFIG_CHAIN HOSE FIXED21 2 40 90
+0 SYNTH BEGIN DEFINE MINIFIG_CHAIN_16L HOSE FIXED21 2 40 90
 0 // Minifig Chain Link
 1 14 0 9 0 1 0 0 0 1 0 0 0 1 209.dat
 0 // Minifig Chain Link
 1 14 0 9 0 1 0 0 0 1 0 0 0 1 209.dat
 0 // Minifig Chain Link
 1 14 0 9 0 1 0 0 0 1 0 0 0 1 209.dat
+0 SYNTH END
+0 
+0
+0 FILE MINIFIG_STRING_11L.ldr
+0 MINIFIG_STRING SYNTHESIS DEFINITION
+0 Name: MINIFIG_STRING_11L.ldr
+0 Author: Don Heyse
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE MINIFIG_STRING_11L HOSE FIXED9 2 40 0
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 SYNTH END
+0 
+0
+0 FILE MINIFIG_STRING_21L.ldr
+0 MINIFIG_STRING SYNTHESIS DEFINITION
+0 Name: MINIFIG_STRING_21L.ldr
+0 Author: Don Heyse
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE MINIFIG_STRING_21L HOSE FIXED19 2 40 0
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 SYNTH END
+0 
+0
+0 FILE MINIFIG_STRING_31L.ldr
+0 MINIFIG_STRING SYNTHESIS DEFINITION
+0 Name: MINIFIG_STRING_31L.ldr
+0 Author: Don Heyse
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE MINIFIG_STRING_31L HOSE FIXED29 2 40 0
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 SYNTH END
+0 
+0
+0 FILE MINIFIG_STRING_41L.ldr
+0 MINIFIG_STRING_41L SYNTHESIS DEFINITION
+0 Name: MINIFIG_STRING_41L.ldr
+0 Author: Don Heyse
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE MINIFIG_STRING_41L HOSE FIXED39 2 40 0
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 SYNTH END
+0 
+0
+0 FILE MINIFIG_STRING_WITH_GRIPS_21L.ldr
+0 MINIFIG_STRING_WITH_GRIPS_21L SYNTHESIS DEFINITION
+0 Name: MINIFIG_STRING_WITH_GRIPS_21L.ldr
+0 Author: Don Heyse
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE MINIFIG_STRING_WITH_GRIPS_21L HOSE FIXED19 2 40 0
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // (alternate part) Minifig String Grip
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572c.dat
 0 SYNTH END
 0 
 0
@@ -753,6 +847,15 @@
 0 SYNTH END
 0 
 0 
+0 FILE _TOWN_BELT.ldr
+0 TOWN_BELT SYNTHESIS DEFINITION
+0 Name: TOWN_BELT.ldr
+0 Author: Don Heyse
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE TOWN_BELT BAND FIXED 0.05 1
+1 1 10 -21 0 0 1 0 -1 0 0 0 0 1 43903a.dat
+1 4 -10 -21 0 0 -1 0 1 0 0 0 0 1 43903a.dat
+0 SYNTH END
 0 
 0 
 0 
