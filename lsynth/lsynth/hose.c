@@ -284,6 +284,8 @@ merge_segments_length(
 int
 merge_segments_count(
   hose_attrib_t  *hose,
+  part_t    *start,
+  part_t    *end,
   part_t    *segments,
   int       *n_segments,
   int       count,
@@ -340,8 +342,41 @@ merge_segments_count(
     segments[n-1] = segments[*n_segments-1]; // Use the last point twice?
   }
   segments[n++] = segments[*n_segments-1]; // Keep the last point.
-
   *n_segments = n;
+
+  // NOTE: What I really need to do here is place the last point
+  // segments[n-1].offset at the location of the end constraint + a lenE 
+  // offset in the direction of the orientation of the end constraint.
+  // otherwise the final vector is tiny and rounding can point it backwards.
+  // We can see a backwards vector by checking for a negative dot product.
+
+  // So, move the last point lenE from the start of the End constraint.
+  // This should place it at the far point of the end constraint.
+  d[0] = 0; d[1] = lenE; d[2] = 0;   // Create an offset vector of lenE
+  d[1] *= -1;                        // along the -Y axis.   Reorient it
+  vectorrot(d,end->orient);          // along the end constraint axis, and
+  vectoradd(segments[n-1].offset,d); // add it to the end constraint origin.
+
+  if (0) // Debug printouts
+  {
+    extern PRECISION dotprod(PRECISION a[3], PRECISION b[3]); // from curve.c
+
+    PRECISION last, next;
+    PRECISION dn[3],dp;
+    PRECISION m2[3][3];
+
+    matrixcp(m2,end->orient); 
+    printf("  E =(%g, %g, %g, %g, %g, %g, %g, %g, %g)\n", m2[0][0], m2[0][1], m2[0][2],
+	   m2[1][0], m2[1][1], m2[1][2], m2[2][0], m2[2][1], m2[2][2]);
+    printf("  d=(%g, %g, %g)", d[0], d[1], d[2]);
+
+    vectorsub3(d,segments[n-1].offset,segments[n-2].offset);
+    last = vectorlen(d);
+    vectorsub3(dn,segments[n-2].offset,segments[n-3].offset);
+    next = vectorlen(dn);
+    dp = dotprod(dn,d);
+    printf("  last=%g, next=%g, dp=%g\n", last, next, dp);
+  }
 
   printf("Produced %d points (%d segments)\n", *n_segments, *n_segments-1);
 
@@ -739,7 +774,7 @@ render_hose(
 	// Set i to how many segments we need to get near to the end.
 	merge_segments_length(seglist,&i,hose->mid.attrib,output);
 	// Squish an extra part into the last segment to make it reach the end.
-	merge_segments_count(hose, segments,&n_segments,i,output); // Yuck!
+	merge_segments_count(hose,&first,&second,segments,&n_segments,i,output); // Yuck!
 	// Or, stretch the last part of the hose a bit to make it reach the end.
 	// merge_segments_count(hose, segments,&n_segments,i-1,output); // Yuckier!
       }
@@ -791,7 +826,7 @@ render_hose(
     n_segments *= c;
     // Make sure final segment matches second constraint
     vectorcp(segments[n_segments-1].offset,second.offset);
-    merge_segments_count(hose, seglist,&n_segments,hose->fill,output);
+    merge_segments_count(hose,&first,&second,seglist,&n_segments,hose->fill,output);
     //printf("Merged segments to %d segments of len %d\n", n_segments, hose->mid.attrib);
     //orient(&first,&second,n_segments,seglist);
     orientq(&first,&second,n_segments,seglist); // With quaternions!
