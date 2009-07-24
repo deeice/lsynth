@@ -311,15 +311,15 @@
 0 FILE BRICK_ARC.ldr
 0 BRICK_ARC SYNTHESIS DEFINITION
 0 Name: BRICK_ARC.ldr
-0 Author: Willy Tschager
+0 Author: Eric Albrecht
 0 Unofficial Model
 0 SYNTH BEGIN DEFINE BRICK_ARC HOSE FIXED 1 100 0
-0 // Plate 1x1
-1 0 0 0 0 0 -1 0 0 0 -1 1 0 0 3024.DAT
-0 // Plate 1x1
-1 25 0 0 0 0 -1 0 0 0 -1 1 0 0 3024.DAT
-0 // Plate 1x1
-1 0 0 0 0 0 -1 0 0 0 -1 1 0 0 3024.DAT
+0 // Plate 2 x 2 Round
+1 0 0 0 0 -1 0 0 0 1 0 0 0 -1 4032.DAT
+0 // Plate 2 x 2 Round
+1 10 0 0 0 -1 0 0 0 1 0 0 0 -1 4032.DAT
+0 // Plate 2 x 2 Round
+1 0 0 0 0 -1 0 0 0 1 0 0 0 -1 4032.DAT
 0 SYNTH END
 0 
 0
