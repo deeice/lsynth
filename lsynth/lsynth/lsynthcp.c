@@ -46,6 +46,9 @@ typedef struct {
 product_t products[256];
 int       n_products = 0;
 
+char version[] = "3.1";
+char beta[] = " Beta E";
+
 int ldraw_part = 0;
 int group_size;
 
@@ -191,6 +194,15 @@ parse_descr(char *fullpath_progname)
     int got_end = 0;
 
     strclean(line);
+
+    if (sscanf(line,"0 !VERSION %d.%d\n", &i, &d) == 2) {
+      char mpdversion[32];
+      sprintf(mpdversion, "%d.%d", i, d);
+      if (strcmp(mpdversion, version))
+        printf("\nWarning: lsynth.mpd version %s does not match executable version %s!\n\n", 
+                mpdversion, version);
+    }
+    else
 
     if (sscanf(line,"0 SYNTH PART %s %s %s\n",product, nickname, method) == 3) {
       strcpy(products[n_products].name,product);
@@ -966,7 +978,7 @@ int main(int argc, char* argv[])
     exit(0);
   }
 
-  printf("LSynth version 3.1 beta D by Kevin Clague, kevin_clague@yahoo.com\n");
+  printf("LSynth version %s%s by Kevin Clague, kevin_clague@yahoo.com\n",version,beta);
   printf("                   and Don Heyse\n");
 
   if (argc == 2 && strcasecmp(argv[1],"-v") == 0) {
