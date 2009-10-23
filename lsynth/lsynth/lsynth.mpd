@@ -3,9 +3,9 @@
 0 Name: LSynth.mpd
 0 Author: Kevin L. Clague
 0 !LDRAW_ORG Unofficial Model
-0 //
+
 0 !VERSION 3.1
-0 //
+
 0 !HISTORY 2007-03-28 [Willy Tschager] Streamlined stiffness in various definitions, added hose constraints
 0 !HISTORY 2007-03-28 [Don M. Heyse]   Minifig Chain updates.
 0 !HISTORY 2007-04-17 [Don M. Heyse]   Added offset -1Y to PNEUMATIC_HOSE, FLEX_SYSTEM_HOSE end_parts. Added -1Y to RUBBER_HOSE start_part.
@@ -21,7 +21,6 @@
 0 !HISTORY 2007-07-02 [Willy Tschager] New nomenclatura for meta commands. Moved old meta commands to new section for backwards compatibility.
 0 !HISTORY 2007-10-17 [Willy Tschager] Added TECHNIC_CHAIN_TREAD_38. Renamed TECHNIC_LINK_TREAD to TECHNIC_CHAIN_TREAD.
 0 !HISTORY 2008-02-23 [Willy Tschager] Added BRICK_ARC. Added new constraints. Added ELECTRIC_POWER_FUNCTIONS_CABLE.
-0 !HISTORY 2008-03-10 [Willy Tschager] Added Minifig Chain constraints.
 0 !HISTORY 2009-05-06 [Don M. Heyse]   Fixed singular matrix on constraint 57520.dat.
 0 !HISTORY 2009-05-07 [Don M. Heyse]   Fixed constraint offsets on TECHNIC_CHAIN_TREAD_38.
 0 !HISTORY 2009-05-09 [Don M. Heyse]   Fixed constraint offsets on 57520 & 6628.
@@ -29,11 +28,10 @@
 0 !HISTORY 2009-06-08 [Don M. Heyse]   Added LS209.dat and fixed MINIFIG_CHAIN.
 0 !HISTORY 2009-06-08 [Don M. Heyse]   Reworked FLEXIBLE_HOSE like the MINIFIG_CHAIN.
 0 !HISTORY 2009-06-22 [Willy Tschager] Removed LS209.dat. Added FIBER_OPTICS_CABLE_WIDE and !VERSION 
-0 //
-0 //
-0 //
+0 !HISTORY 2009-10-18 [Willy Tschager] Added STRING_xxL
+
 0 // These are the complete parts that LSynth knows about.
-0 //
+
 0 SYNTH PART 4297187.dat PLI_ELECTRIC_NXT_CABLE_20CM   ELECTRIC_NXT_CABLE
 0 SYNTH PART 4297188.dat PLI_ELECTRIC_NXT_CABLE_35CM   ELECTRIC_NXT_CABLE
 0 SYNTH PART 4297185.dat PLI_ELECTRIC_NXT_CABLE_50CM   ELECTRIC_NXT_CABLE
@@ -48,7 +46,7 @@
 0 SYNTH PART 3506C07.dat PLI_ELECTRIC_RCX_CABLE_328CM  ELECTRIC_RCX_CABLE
 0 SYNTH PART  73590a.dat PLI_HOSE_FLEXIBLE_8.5L_WITHOUT_TABS  HOSE_FLEXIBLE
 0 SYNTH PART  73590b.dat PLI_HOSE_FLEXIBLE_8.5L_WITH_TABS  HOSE_FLEXIBLE
-0 SYNTH PART  208C01.dat PLI_MINIFIG_CHAIN_21  MINIFIG_CHAIN
+0 SYNTH PART  208C01.dat PLI_MINIFIG_CHAIN_16L  MINIFIG_CHAIN_16L
 0 SYNTH PART   32580.dat PLI_TECHNIC_AXLE_FLEXIBLE_7   TECHNIC_AXLE_FLEXIBLE
 0 SYNTH PART   32199.dat PLI_TECHNIC_AXLE_FLEXIBLE_11  TECHNIC_AXLE_FLEXIBLE
 0 SYNTH PART   32200.dat PLI_TECHNIC_AXLE_FLEXIBLE_12  TECHNIC_AXLE_FLEXIBLE
@@ -118,13 +116,19 @@
 0 //                 not the same as the mid_part then they are not included in
 0 //                 the N count of identical fixed parts, and are positioned 
 0 //                 exactly on the start/end constraints.  (eg. HOSE_FLEXIBLE)
+0 //                 Because this behavior is different from ordinary hoses
+0 //                 (where the hose stretches from the origin of the start 
+0 //                 constraint to the origin of the end constraint) it is best
+0 //                 to use specialized end constraints for FIXED-N constructs
+0 //                 where the length, and perhaps even the shape, closely 
+0 //                 match that of the end parts, eg. a MINIFIG_CHAIN link.  
 0 //    <x> <y> <z>  these are used to offset synthesis components as part of
 0 //                 the final synthesis process of placing parts in 3D space.
 0 //    <a> thru <i> these are the orientations used to make all the start,
 0 //                 mid, and end parts all have the same orientation in the
 0 //                 synthesis process.
 0 // For HOSEs with the FIXED fill type an alternate mid part can optionally
-0 // be declared after the end_part.  See MINIFIG_STRING_WITH_GRIPS_21L.
+0 // be declared after the end_part.  See STRING_WITH_GRIPS_21L.
 0 //
 0 //
 0 //  The format for describing BAND constraints is:
@@ -217,11 +221,11 @@
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS05.dat
 0 // LSynth Constraint Part - Type 6 - "Power Functions Cable"
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS06.dat
-0 // LSynth Constraint Part - Type 7 - "Minifig Chain Link"
+0 // LSynth Constraint Part - Type 7 - "RCX Cable"
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS07.dat
-0 // LSynth Constraint Part - Type 8 - "Minifig String"
+0 // LSynth Constraint Part - Type 8 - "Minifig Chain Link"
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS08.dat
-0 // LSynth Constraint Part - Type 9 - "RCX Cable"
+0 // LSynth Constraint Part - Type 9 - "Minifig String Grip"
 1 0 0 0 0 1 0 0 0 1 0 0 0 1 LS09.dat
 0 SYNTH END
 0 
@@ -410,7 +414,7 @@
 1 5 0 0 0 1 0 0 0 -1 0 0 0 1 755.DAT
 0 SYNTH END
 0 
-0 
+0
 0 FILE MINIFIG_CHAIN_16L.ldr
 0 MINIFIG_CHAIN_16L SYNTHESIS DEFINITION
 0 Name: MINIFIG_CHAIN_16L.ldr
@@ -424,84 +428,7 @@
 0 // Minifig Chain Link
 1 14 0 9 0 1 0 0 0 1 0 0 0 1 209.dat
 0 SYNTH END
-0 
 0
-0 FILE MINIFIG_STRING_11L.ldr
-0 MINIFIG_STRING SYNTHESIS DEFINITION
-0 Name: MINIFIG_STRING_11L.ldr
-0 Author: Don Heyse
-0 Unofficial Model
-0 SYNTH BEGIN DEFINE MINIFIG_STRING_11L HOSE FIXED9 2 40 0
-0 // Minifig String Segment
-1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
-0 // Minifig String Segment
-1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
-0 // Minifig String Segment
-1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
-0 SYNTH END
-0 
-0
-0 FILE MINIFIG_STRING_21L.ldr
-0 MINIFIG_STRING SYNTHESIS DEFINITION
-0 Name: MINIFIG_STRING_21L.ldr
-0 Author: Don Heyse
-0 Unofficial Model
-0 SYNTH BEGIN DEFINE MINIFIG_STRING_21L HOSE FIXED19 2 40 0
-0 // Minifig String Segment
-1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
-0 // Minifig String Segment
-1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
-0 // Minifig String Segment
-1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
-0 SYNTH END
-0 
-0
-0 FILE MINIFIG_STRING_31L.ldr
-0 MINIFIG_STRING SYNTHESIS DEFINITION
-0 Name: MINIFIG_STRING_31L.ldr
-0 Author: Don Heyse
-0 Unofficial Model
-0 SYNTH BEGIN DEFINE MINIFIG_STRING_31L HOSE FIXED29 2 40 0
-0 // Minifig String Segment
-1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
-0 // Minifig String Segment
-1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
-0 // Minifig String Segment
-1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
-0 SYNTH END
-0 
-0
-0 FILE MINIFIG_STRING_41L.ldr
-0 MINIFIG_STRING_41L SYNTHESIS DEFINITION
-0 Name: MINIFIG_STRING_41L.ldr
-0 Author: Don Heyse
-0 Unofficial Model
-0 SYNTH BEGIN DEFINE MINIFIG_STRING_41L HOSE FIXED39 2 40 0
-0 // Minifig String Segment
-1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
-0 // Minifig String Segment
-1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
-0 // Minifig String Segment
-1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
-0 SYNTH END
-0 
-0
-0 FILE MINIFIG_STRING_WITH_GRIPS_21L.ldr
-0 MINIFIG_STRING_WITH_GRIPS_21L SYNTHESIS DEFINITION
-0 Name: MINIFIG_STRING_WITH_GRIPS_21L.ldr
-0 Author: Don Heyse
-0 Unofficial Model
-0 SYNTH BEGIN DEFINE MINIFIG_STRING_WITH_GRIPS_21L HOSE FIXED19 2 40 0
-0 // Minifig String Segment
-1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
-0 // Minifig String Segment
-1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
-0 // Minifig String Segment
-1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
-0 // (alternate part) Minifig String Grip
-1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572c.dat
-0 SYNTH END
-0 
 0
 0 FILE STRING_HOSE.ldr
 0 STRING_HOSE SYNTHESIS DEFINITION
@@ -514,6 +441,69 @@
 1 0 0 0 2 1 0 0 0 0 1 0 -1 0 LS60.dat
 0 SYNTH END
 0 
+0
+0 FILE STRING_11L.ldr
+0 STRING_11L SYNTHESIS DEFINITION
+0 Name: STRING_11L.ldr
+0 Author: Willy Tschager
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE STRING_11L HOSE FIXED90 2 10 0
+1 2 0 0 1 1 0 0 0 0 2 0 -1 0 LS60.dat
+1 2 0 0 2 1 0 0 0 0 1 0 -1 0 LS60.dat
+1 2 0 0 1 1 0 0 0 0 2 0 -1 0 LS60.dat
+0 SYNTH END
+0
+0
+0 FILE STRING_21L.ldr
+0 STRING_21L SYNTHESIS DEFINITION
+0 Name: STRING_21L.ldr
+0 Author: Willy Tschager
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE STRING_21L HOSE FIXED190 2 10 0
+1 2 0 0 1 1 0 0 0 0 2 0 -1 0 LS60.dat
+1 2 0 0 2 1 0 0 0 0 1 0 -1 0 LS60.dat
+1 2 0 0 1 1 0 0 0 0 2 0 -1 0 LS60.dat
+0 SYNTH END
+0 
+0
+0 FILE STRING_31L.ldr
+0 STRING_31L SYNTHESIS DEFINITION
+0 Name: STRING_31L.ldr
+0 Author: Willy Tschager
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE STRING_31L HOSE FIXED290 2 10 0
+1 2 0 0 1 1 0 0 0 0 2 0 -1 0 LS60.dat
+1 2 0 0 2 1 0 0 0 0 1 0 -1 0 LS60.dat
+1 2 0 0 1 1 0 0 0 0 2 0 -1 0 LS60.dat
+0 SYNTH END
+0
+0
+0 FILE STRING_41L.ldr
+0 STRING_41L SYNTHESIS DEFINITION
+0 Name: STRING_41L.ldr
+0 Author: Willy Tschager
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE STRING_41L HOSE FIXED390 2 10 0
+1 2 0 0 1 1 0 0 0 0 2 0 -1 0 LS60.dat
+1 2 0 0 2 1 0 0 0 0 1 0 -1 0 LS60.dat
+1 2 0 0 1 1 0 0 0 0 2 0 -1 0 LS60.dat
+0 SYNTH END
+0
+0
+0 FILE STRING_WITH_GRIPS_21L.ldr
+0 STRING_WITH_GRIPS_21L_ROPE SYNTHESIS DEFINITION
+0 Name: STRING_WITH_GRIPS_21L.ldr
+0 Author: Don Heyse
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE STRING_WITH_GRIPS_21L HOSE FIXED19 2 40 0
+1 20 0 0 20 1 0 0 0 0 1 0 -1 0 LS61.dat
+0 // Minifig Rope Link
+1 20 0 0 20 1 0 0 0 0 1 0 -1 0 LS61.dat
+1 20 0 0 20 1 0 0 0 0 1 0 -1 0 LS61.dat
+0 // (alternate part) Minifig String Grip
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572c.dat
+0 SYNTH END
+0
 0
 0 FILE TECHNIC_AXLE_FLEXIBLE.ldr
 0 TECHNIC_AXLE_FLEXIBLE SYNTHESIS DEFINITION
@@ -846,6 +836,9 @@
 1 0 0 32 0 0.342 0.94 0 0.94 -0.342 0 0 0 1 681.DAT
 0 SYNTH END
 0 
+0 // ############################################################
+0 // Extra --EXPERIMENTAL-- stuff here
+0 // ############################################################
 0 
 0 FILE _TOWN_BELT.ldr
 0 TOWN_BELT SYNTHESIS DEFINITION
@@ -858,6 +851,96 @@
 0 SYNTH END
 0 
 0 
+0 FILE STRING_L11.ldr
+0 STRING_L11 SYNTHESIS DEFINITION
+0 Name: STRING_L11.ldr
+0 Author: w.
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE STRING_L11 HOSE FIXED90 2 10 0
+0 // LSynth Technic Flexible Axle - End Piece
+1 0 0 0 2 1 0 0 0 0 1 0 -1 0 LS60.dat
+1 2 0 0 2 1 0 0 0 0 1 0 -1 0 LS60.dat
+1 0 0 0 2 1 0 0 0 0 1 0 -1 0 LS60.dat
+0 SYNTH END
+0
+0
+0 FILE MINIFIG_STRING_11L.ldr
+0 MINIFIG_STRING SYNTHESIS DEFINITION
+0 Name: MINIFIG_STRING_11L.ldr
+0 Author: Don Heyse
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE MINIFIG_STRING_11L HOSE FIXED9 2 40 0
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 SYNTH END
+0 
+0
+0 FILE MINIFIG_STRING_21L.ldr
+0 MINIFIG_STRING SYNTHESIS DEFINITION
+0 Name: MINIFIG_STRING_21L.ldr
+0 Author: Don Heyse
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE MINIFIG_STRING_21L HOSE FIXED19 2 40 0
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 SYNTH END
+0 
+0
+0 FILE MINIFIG_STRING_31L.ldr
+0 MINIFIG_STRING SYNTHESIS DEFINITION
+0 Name: MINIFIG_STRING_31L.ldr
+0 Author: Don Heyse
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE MINIFIG_STRING_31L HOSE FIXED29 2 40 0
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 SYNTH END
+0 
+0
+0 FILE MINIFIG_STRING_41L.ldr
+0 MINIFIG_STRING_41L SYNTHESIS DEFINITION
+0 Name: MINIFIG_STRING_41L.ldr
+0 Author: Don Heyse
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE MINIFIG_STRING_41L HOSE FIXED39 2 40 0
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 SYNTH END
+0 
+0
+0 FILE MINIFIG_STRING_WITH_GRIPS_21L.ldr
+0 MINIFIG_STRING_WITH_GRIPS_21L SYNTHESIS DEFINITION
+0 Name: MINIFIG_STRING_WITH_GRIPS_21L.ldr
+0 Author: Don Heyse
+0 Unofficial Model
+0 SYNTH BEGIN DEFINE MINIFIG_STRING_WITH_GRIPS_21L HOSE FIXED19 2 40 0
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // Minifig String Segment
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572b.dat
+0 // (alternate part) Minifig String Grip
+1 20 10 0 0 0 -1 0 1 0 0 0 0 1 572c.dat
+0 SYNTH END
+0 
+0
 0 
 0 
 0 
@@ -899,5 +982,8 @@
 0 
 0 
 0 
+0 
+0 
+0
 0
 0
