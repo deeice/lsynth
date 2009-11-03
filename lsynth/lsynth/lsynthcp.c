@@ -189,6 +189,9 @@ parse_descr(char *fullpath_progname)
 
   if (mpd == NULL) {
     printf("Failed to open lsynth.mpd for reading\n");
+#ifdef WIN32
+    MessageBox(0,"Failed to open lsynth.mpd for reading.","LSynth",MB_OK);
+#endif
     return -1;
   }
 
