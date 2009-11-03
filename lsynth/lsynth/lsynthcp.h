@@ -58,8 +58,8 @@ void list_products( void );
  *
  **********************************************************************/
 
-#define STRETCH 0
-#define FIXED   1
-#define FIXED3  2
+#define STRETCH -1
+#define FIXED   0
+#define FIXED3  -2
 
 #endif

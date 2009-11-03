@@ -305,7 +305,11 @@ parse_descr(char *fullpath_progname)
 	if (n != 14)
 	  strcpy(hose_types[n_hose_types].alt.type, ""); // Skip comments
 	else
+        {
+#ifdef DEBUGGING_HOSES
 	  printf("Found HOSE alt segment %s\n", hose_types[n_hose_types].alt.type);
+#endif
+        }
       }
       if ( ! got_end) {
 	printf("Error: Unexepcted end of file\n");
