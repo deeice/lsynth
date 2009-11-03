@@ -52,7 +52,9 @@ product_t products[256];
 int       n_products = 0;
 
 char version[] = "3.1";
-char beta[] = " Beta F";
+char beta[] = " Beta G";
+
+char mpdversion[32] = "UNKNOWN";
 
 int ldraw_part = 0;
 int group_size;
@@ -201,8 +203,10 @@ parse_descr(char *fullpath_progname)
     strclean(line);
 
     if (sscanf(line,"0 !VERSION %d.%d\n", &i, &d) == 2) {
-      char mpdversion[32];
       sprintf(mpdversion, "%d.%d", i, d);
+    }
+    else if (!strncmp(line,"0 SYNTH ", 8))
+    {
       if (strcmp(mpdversion, version))
       {
         char s[256];
@@ -212,9 +216,9 @@ parse_descr(char *fullpath_progname)
 #ifdef WIN32
         MessageBox(0,s,"LSynth",MB_OK);
 #endif
+        strcpy(mpdversion, version); // Only warn once.
       }
     }
-    else
 
     if (sscanf(line,"0 SYNTH PART %s %s %s\n",product, nickname, method) == 3) {
       strcpy(products[n_products].name,product);
