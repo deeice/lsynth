@@ -52,12 +52,43 @@ product_t products[256];
 int       n_products = 0;
 
 char version[] = "3.1";
-char beta[] = " Beta G";
+char beta[] = " Beta H";
 
 char mpdversion[32] = "UNKNOWN";
 
 int ldraw_part = 0;
 int group_size;
+
+//---------------------------------------------------------------------------
+void messagebox( const char* title, const char* message )
+{
+#if defined( __APPLE__ ) && defined( __MACH__ )
+  Str255 strTitle;
+  Str255 strMessage;
+  CopyCStringToPascal( title, strTitle );
+  CopyCStringToPascal( message, strMessage );
+  StandardAlert( kAlertNoteAlert, strTitle, strMessage, NULL, 0 );
+#elif WIN32
+  MessageBox( NULL, message, title, MB_OK );
+#else
+  // Unknown OS.  We'll probably have to settle for commandline warnings. 
+  // But first attempt to launch an oldsKool stylee xmessage.  
+  char cmd[1024];
+  // Apparently debian systems typically come with the much prettier zenity.
+  sprintf(cmd, "zenity --warning --title=\"%s\" --text=\"%s\"", title, message);
+  if (system(cmd) == -1) // This probably means /bin/sh is missing, not zenity...
+  {
+    // The Athena widgets are hideous, but there's a pretty good chance it'll work.
+    sprintf(cmd, "xmessage -bg lightgrey -fn 9x15bold -buttons OK -center -title \"%s\" \"%s\"", title, message);
+    // I should probably skip the fork and just use system to make it a modal messagebox.
+    if(fork()==0){
+      close(1); close(2);
+      system(cmd);
+      exit(0);
+    }
+  }
+#endif
+}
 
 //---------------------------------------------------------------------------
    /* If this code works, it was written by Lars C. Hassing. */
@@ -189,9 +220,7 @@ parse_descr(char *fullpath_progname)
 
   if (mpd == NULL) {
     printf("Failed to open lsynth.mpd for reading\n");
-#ifdef WIN32
-    MessageBox(0,"Failed to open lsynth.mpd for reading.","LSynth",MB_OK);
-#endif
+    messagebox("LSynth", "Failed to open lsynth.mpd for reading.");
     return -1;
   }
 
@@ -216,9 +245,7 @@ parse_descr(char *fullpath_progname)
         sprintf(s, "\nWarning: lsynth.mpd version %s does not match executable version %s!", 
                 mpdversion, version);
         printf("%s\n\n", s);
-#ifdef WIN32
-        MessageBox(0,s,"LSynth",MB_OK);
-#endif
+        messagebox("LSynth", s);
         strcpy(mpdversion, version); // Only warn once.
       }
     }
