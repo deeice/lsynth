@@ -74,9 +74,12 @@ void messagebox( const char* title, const char* message )
   // Unknown OS.  We'll probably have to settle for commandline warnings. 
   // But first attempt to launch an oldsKool stylee xmessage.  
   char cmd[1024];
+  int i;
   // Apparently debian systems typically come with the much prettier zenity.
   sprintf(cmd, "zenity --warning --title=\"%s\" --text=\"%s\"", title, message);
-  if (system(cmd) == -1) // This probably means /bin/sh is missing, not zenity...
+  i = system(cmd);
+  i = i >> 8; // Get exit value of zenity.
+  if ((i != 0) && (i != 1)) // (0=OK, 1=X)  So this probably means no zenity...
   {
     // The Athena widgets are hideous, but there's a pretty good chance it'll work.
     sprintf(cmd, "xmessage -bg lightgrey -fn 9x15bold -buttons OK -center -title \"%s\" \"%s\"", title, message);
