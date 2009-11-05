@@ -62,34 +62,44 @@ int group_size;
 //---------------------------------------------------------------------------
 void messagebox( const char* title, const char* message )
 {
+  char cmd[1024];
+  int i;
+
 #if defined( __APPLE__ ) && defined( __MACH__ )
-  Str255 strTitle;
-  Str255 strMessage;
-  CopyCStringToPascal( title, strTitle );
-  CopyCStringToPascal( message, strMessage );
-  StandardAlert( kAlertNoteAlert, strTitle, strMessage, NULL, 0 );
+  \\ Skip activate if we dont want to focus on dialog.  Finder will bounce instead.
+  sprintf(cmd, "osascript -e \'tell app \"Finder\" to activate display dialog \"%s\"\'", message);
+  i = system(cmd);
+
 #elif WIN32
   MessageBox( NULL, message, title, MB_OK );
+
 #else
   // Unknown OS.  We'll probably have to settle for commandline warnings. 
   // But first attempt to launch an oldsKool stylee xmessage.  
-  char cmd[1024];
-  int i;
-  // Apparently debian systems typically come with the much prettier zenity.
-  sprintf(cmd, "zenity --warning --title=\"%s\" --text=\"%s\"", title, message);
+  // Gnome systems often come with the much prettier zenity.  Try it first.
+  sprintf(cmd, "zenity --warning --title=\"%s\" --text=\"%s\" 2>1 >/dev/null", title, message);
   i = system(cmd);
   i = i >> 8; // Get exit value of zenity.
-  if ((i != 0) && (i != 1)) // (0=OK, 1=X)  So this probably means no zenity...
-  {
-    // The Athena widgets are hideous, but there's a pretty good chance it'll work.
-    sprintf(cmd, "xmessage -bg lightgrey -fn 9x15bold -buttons OK -center -title \"%s\" \"%s\"", title, message);
-    // I should probably skip the fork and just use system to make it a modal messagebox.
-    if(fork()==0){
-      close(1); close(2);
-      system(cmd);
-      exit(0);
-    }
+  if ((i == 0) || (i == 1)) // (0=OK, 1=X)  
+    return;
+
+  // No gnome?  Try kdialog from KDE.
+  sprintf(cmd, "kdialog --title=\"%s\" --sorry \"%s\" 2>1 >/dev/null", title, message);
+  i = system(cmd);
+  i = i >> 8; // Get exit value of kdialog.
+  if ((i == 0) || (i == 1)) // (0=OK, 1=X)  
+    return;
+
+  // The unpatched Athena widgets are hideous, but there's a pretty good chance it'll work.
+  sprintf(cmd, "xmessage -bg lightgrey -fn 9x15bold -buttons OK -center -title \"%s\" \"%s\"", title, message);
+  // I should probably skip the fork and just use system to make it a modal messagebox.
+  if(fork()==0){
+    close(1); close(2);
+    system(cmd);
+    exit(0);
   }
+  
+  // Still here?  Sorry, yer stuck with command line output.
 #endif
 }
 
@@ -222,7 +232,7 @@ parse_descr(char *fullpath_progname)
   mpd = fopen(filename,"r");
 
   if (mpd == NULL) {
-    printf("Failed to open lsynth.mpd for reading\n");
+    printf("Failed to open lsynth.mpd for reading.\n");
     messagebox("LSynth", "Failed to open lsynth.mpd for reading.");
     return -1;
   }
