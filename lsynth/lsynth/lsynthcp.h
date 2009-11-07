@@ -58,8 +58,16 @@ void list_products( void );
  *
  **********************************************************************/
 
+#if 1
+// Somehow this broke RCX (STRETCH) cables in 3.1 beta g.
+// Maybe what happened is not everything got recompiled...
 #define STRETCH -1
 #define FIXED   0
 #define FIXED3  -2
+#else
+#define STRETCH 0
+#define FIXED   1
+#define FIXED3  2
+#endif
 
 #endif

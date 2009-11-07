@@ -52,7 +52,7 @@ product_t products[256];
 int       n_products = 0;
 
 char version[] = "3.1";
-char beta[] = " Beta H";
+char beta[] = " Beta I";
 
 char mpdversion[32] = "UNKNOWN";
 
