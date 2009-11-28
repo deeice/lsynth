@@ -1,0 +1,11 @@
+//Microsoft Developer Studio generated resource script.
+//
+//#include "resource.h"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+AppIcon           ICON    "res\\lsynth.ico"
+
