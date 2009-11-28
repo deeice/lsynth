@@ -207,7 +207,7 @@ calc_angles(
 
 #define REORIENT_TREAD 1
 //#define SHOW_XY_PLANE_FOR_DEBUG 1
-#define DEBUGGING_FIXED3_BANDS 1
+//#define DEBUGGING_FIXED3_BANDS 1
 // #define STRETCH_FIXED3 1
 
 #define USE_TURN_ANGLE 1

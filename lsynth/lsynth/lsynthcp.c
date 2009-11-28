@@ -52,7 +52,7 @@ product_t products[256];
 int       n_products = 0;
 
 char version[] = "3.1";
-char beta[] = " Beta I";
+char beta[] = ""; // " Beta I";
 
 char mpdversion[32] = "UNKNOWN";
 
@@ -66,7 +66,7 @@ void messagebox( const char* title, const char* message )
   int i;
 
 #if defined( __APPLE__ ) && defined( __MACH__ )
-  \\ Skip activate if we dont want to focus on dialog.  Finder will bounce instead.
+  // Skip activate if we dont want to focus on dialog.  Finder will bounce instead.
   sprintf(cmd, "osascript -e \'tell app \"Finder\" to activate display dialog \"%s\"\'", message);
   i = system(cmd);
 
@@ -1042,7 +1042,7 @@ int main(int argc, char* argv[])
   }
 
   printf("LSynth version %s%s by Kevin Clague, kevin_clague@yahoo.com\n",version,beta);
-  printf("                   and Don Heyse\n");
+  printf("\n");  // ("                   and Don Heyse\n"); // Much cleaner.
 
   if (argc == 2 && strcasecmp(argv[1],"-v") == 0) {
     return 1;
