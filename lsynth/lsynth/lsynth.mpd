@@ -29,6 +29,7 @@
 0 !HISTORY 2009-06-08 [Don M. Heyse]   Reworked FLEXIBLE_HOSE like the MINIFIG_CHAIN.
 0 !HISTORY 2009-06-22 [Willy Tschager] Removed LS209.dat. Added FIBER_OPTICS_CABLE_WIDE and !VERSION 
 0 !HISTORY 2009-10-18 [Willy Tschager] Added STRING_xxL
+0 !HISTORY 2018-02-25 [DMH]            Switched ELECTRIC_CABLE to the thinner one from Steffen.
 
 0 // These are the complete parts that LSynth knows about.
 
@@ -687,15 +688,12 @@
 0 FILE ELECTRIC_CABLE.ldr
 0 ELECTRIC_CABLE SYNTHESIS DEFINITION
 0 Name: ELECTRIC_CABLE.ldr
-0 Author: Kevin L. Clague
+0 Author: Steffen [Steffen]
 0 Unofficial Model
-0 SYNTH BEGIN DEFINE ELECTRIC_CABLE HOSE STRETCH 9 20 0
-0 // LSynth Electric Cable Segment
-1 0 0 0 0 0 0 -1 0 1 0 1 0 0 LS10.dat
-0 // LSynth Electric Cable Segment
-1 0 0 0 0 0 0 -1 0 1 0 1 0 0 LS10.dat
-0 // LSynth Electric Cable Segment
-1 0 0 0 0 0 0 -1 0 1 0 1 0 0 LS10.dat
+0 SYNTH BEGIN DEFINE ELECTRIC_CABLE HOSE STRETCH 9 35 0
+1 0 0 0 0 0 0 -1 0 1 0 1 0 0 993.dat
+1 0 0 0 0 0 0 -1 0 1 0 1 0 0 993.dat
+1 0 0 0 0 0 0 -1 0 1 0 1 0 0 993.dat
 0 SYNTH END
 0 
 0
