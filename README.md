@@ -1,4 +1,7 @@
- LSynth is a program that synthesizes bendable parts for LDraw files. For information on LDraw, please visit www.ldraw.org, the centralized LDraw information site.
+# LSynth
+LSynth is a program that synthesizes bendable parts for LDraw files. For information on LDraw, please visit www.ldraw.org, the centralized LDraw information site.
+
+![lsynth example](doc/LSynthExample.png?raw=true)
 
 Features:
 
