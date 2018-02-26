@@ -1,9 +1,9 @@
 [Setup]
 AppName=LSynth
-AppVerName=LSynth 3.1
+AppVerName=LSynth 3.1.1
 DefaultDirName={pf}\LSynth
 DefaultGroupName=LSynth
-Compression=lzma
+Compression=zip
 LicenseFile="{app}\license.txt"
 
 [Files]
@@ -19,14 +19,14 @@ Root: HKCU; Subkey: "Software\LSynth"; ValueName: "InstallDir"; ValueType: Strin
 
 [Run]
 Filename: "{app}\readme.txt"; Description: "View the README file"; Flags: postinstall shellexec skipifsilent 
-Filename: "{app}\bin\lsynthcp.exe"; Description: "{cm:LaunchProgram,LSynth}"; 
+Filename: "{app}\bin\lsynthcp.exe"; Description: "Launch LSynth";
 
 [Icons]
 Name: "{group}\LSynth"; Filename: "{app}\bin\lsynthcp.exe"; 
 Name: "{userdesktop}\LSynth"; Filename: "{app}\bin\lsynthcp.exe"; Tasks: "desktopicon"; 
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; 
+Name: "desktopicon"; Description: "Create a &desktop icon"; GroupDescription: "Additional icons:";
 
 [CustomMessages]
 NameAndVersion=%1 version %2
