@@ -463,14 +463,25 @@ int normalize(PRECISION v[3])
 }
 
 /***************************************************************/
-/* returns det(m), m is 3x3 (3x4) matrix */
+/* returns determinant of the 3x3 rotational submatrix         */
 /***************************************************************/
-PRECISION M3Det(PRECISION m[3][4]) /* Note argument type !            */
+PRECISION M34Det(PRECISION m[3][4]) /* Note argument type !     */
 {
    return (m[0][0] * (m[1][1] * m[2][2] - m[2][1] * m[1][2]) +
            m[1][0] * (m[2][1] * m[0][2] - m[0][1] * m[2][2]) +
            m[2][0] * (m[0][1] * m[1][2] - m[1][1] * m[0][2]));
 }
+
+/***************************************************************/
+/* returns determinant of the matrix         */
+/***************************************************************/
+PRECISION M33Det(PRECISION m[3][3]) /* Note argument type !     */
+{
+	return (m[0][0] * (m[1][1] * m[2][2] - m[2][1] * m[1][2]) +
+			m[1][0] * (m[2][1] * m[0][2] - m[0][1] * m[2][2]) +
+			m[2][0] * (m[0][1] * m[1][2] - m[1][1] * m[0][2]));
+}
+
 /***************************************************************/
 // Convert axis v[3] and angle a to quaternion q[4].
 /***************************************************************/
@@ -504,7 +515,7 @@ void matrix2quat(
 
   // NOTE:  First unmirror any mirrored matrix.
   // (Multiplying the rotation matrix with the sign of its determinant).
-  PRECISION D = M3Det(m);
+  PRECISION D = M33Det(m);
   if (D < 0.0)
   {
     // TODO: Unmirror
