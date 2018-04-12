@@ -41,6 +41,9 @@
 #include "lsynthcp.h"
 #include "hose.h"
 #include "band.h"
+#include <unistd.h>
+#include <stdbool.h>
+#import <string.h>
 
 typedef struct {
   char name[126];
@@ -210,24 +213,28 @@ static int skip_rot(char *line, int n_line, FILE *dat, FILE *temp)
  ****************************************************************************/
 
 int
-parse_descr(char *fullpath_progname)
+parse_descr(bool custom_config, char *fullpath_progname)
 {
   char filename[256];
   FILE *mpd;
   char line[256];
 
-  strcpy(filename,fullpath_progname);
-  {
-    char *l, *p;
-
-    for (l = p = filename; *p; *p++) {
-      if (*p == '\\' || *p == '/') {
-        l = p+1;
+  if(!custom_config) {
+    strcpy(filename,fullpath_progname);
+    {
+      char *l, *p;
+  
+      for (l = p = filename; *p; *p++) {
+        if (*p == '\\' || *p == '/') {
+          l = p+1;
+        }
       }
+      *l = '\0';
     }
-    *l = '\0';
+    strcat(filename,"lsynth.mpd");
+  } else {
+    strcpy(filename, fullpath_progname);
   }
-  strcat(filename,"lsynth.mpd");
 
   mpd = fopen(filename,"r");
 
@@ -978,93 +985,21 @@ char * stripquotes(char *s)
   return(s);
 }
 
-#pragma argsused
-int main(int argc, char* argv[])
-{
-  int   dat_argc = 1;
-  char *dat_name;
-  char *dst_name;
-  char *synth_name = NULL;
-  char  filename[512];
-  FILE *outfile;
-  FILE *synthfile;
-  FILE *dat;
-  char line[512];
-  char *nonwhite;
-  int   synthcount = 0;
-  int   subfiles = 0;
-  char *product = NULL;
-  char *method = NULL;
-  /*
-   * Read in the descriptions and constraints for synthesis
-   */
-
-  if (parse_descr(argv[0])) {
-    return 1;
-  }
-
-  /*
-   * Output MLCad.ini for LSynth
-   */
-
-  if (argc == 2 && strcasecmp(argv[1],"-m") == 0) {
-    char path[256];
-    char *l,*p;
-    int i;
-
-    strcpy(path,argv[0]);
-
-    for (i = 0; i < 2; i++) {
-      for (p = path; *p; p++) {
-        if (*p == '\\') {
-          l = p;
-        }
-      }
-      *l = '\0';
-    }
-
-    printf("[LSYNTH]\n");
-    printf("%%PATH = \"%s\"\n",path);
-    product_ini();
-    hose_ini();
-    band_ini();
-    printf("Tangent Statement: INSIDE = SYNTH INSIDE\n");
-    printf("Tangent Statement: OUTSIDE = SYNTH OUTSIDE\n");
-    printf("Tangent Statement: CROSS = SYNTH CROSS\n");
-    printf("Visibility Statement: SHOW = SYNTH SHOW\n");
-    printf("Visibility Statement: HIDE = SYNTH HIDE\n");
-    return 1;
-  }
-
-  if (argc == 2 && strcasecmp(argv[1],"-p") == 0) {
-    printf(argv[0]);
-    exit(0);
-  }
-
-  printf("LSynth version %s%s by Kevin Clague, kevin_clague@yahoo.com\n",version,beta);
-  printf("\n");  // ("                   and Don Heyse\n"); // Much cleaner.
-
-  if (argc == 2 && strcasecmp(argv[1],"-v") == 0) {
-    return 1;
-  }
-
-  /*
-   * Print out help display
-   */
-
-  if (argc == 2 && strcasecmp(argv[1],"-h") == 0 || argc == 1) {
+void usage() {
     extern void list_hose_types(void);
     extern void list_band_types(void);
     extern void list_band_constraints(void);
 
     printf("LSynth is an LDraw compatible flexible part synthesizer\n");
-    printf("  usage: lsynthcp [-v] [-h] [-m] [-l] [-p] <src> <dst>\n");
+    printf("  usage: lsynthcp [-p] | [[-v] [-h] [-m] [-l] [-c <CONFIG FILE> <src> <dst>] [-]\n");
     printf("    -v - prints lsynthcp version\n");
     printf("    -h - prints this help message\n");
-    printf("    -m - prints out the LSynth portion of the MLcad.ini for using\n");
+    printf("    -m - (Windows only) Prints out the LSynth portion of the MLcad.ini for using\n");
     printf("         this program\n");
     printf("    -l - format the output as an official ldraw part\n");
     printf("    -p - prints out the full path name of the this executable\n");
+    printf("    -c <CONFIG FILE> - Lysnth will use the provided config file instead of its own default\n");
+    printf("    -  - causes LSynth to use STDIN/STDOUT\n");
     printf("The easiest way to use LSynth is from within MLcad.  You need to\n");
     printf("make additions to MLCad.ini.  Please see Willy Tscager's tutorial\n");
     printf("page http://www.holly-wood.it/mlcad/lsynth-en.html.\n");
@@ -1077,34 +1012,186 @@ int main(int argc, char* argv[])
     list_hose_constraints();
     list_band_types();
     list_band_constraints();
-    return 1;
-  }
+}
+#pragma argsused
+int main(int argc, char* argv[])
+{
+    int   dat_argc = 1;
+    char *dat_name;
+    char *dst_name;
+    char *synth_name = NULL;
+    char  filename[512];
+    FILE *outfile;
+    FILE *synthfile;
+    FILE *dat;
+    char line[512];
+    char *nonwhite;
+    int   synthcount = 0;
+    int   subfiles = 0;
+    char *product = NULL;
+    char *method = NULL;
+    bool useSTDIN_STDOUT = false;
 
-  if (strcasecmp(argv[1],"-l") == 0) {
-    ldraw_part = 1;
-    dat_argc++;
-  }
-  dat_name = argv[dat_argc];
-  dst_name = argv[dat_argc+1];
+    char *config_file;
 
-  if (argc < 3) {
-    printf("usage: lsynth <input_file> <output_file>\n");
-    return 1;
-  }
+    /*
+     * Command line argument parsing
+     */
 
-  dat = fopen(dat_name,"r");
+    opterr = 0;
+    int c;
 
-  if (dat == NULL) {
-    printf("%s: Failed to open file %s for reading\n",argv[0],dat_name);
-    return -1;
-  }
+    bool vopt = false, hopt = false, mopt = false;
+    bool lopt = false, popt = false, copt = false;
 
-  outfile = fopen(dst_name,"w");
+    while ((c = getopt (argc, argv, "vhmlpc:")) != -1) {
+        switch (c)
+        {
+            // Version
+            case 'v':
+                vopt = true;
+                break;
 
-  if (outfile == NULL) {
-    printf("%s: Failed to open file %s for writing\n",argv[0],dst_name);
-    return -1;
-  }
+            // Help/Usage
+            case 'h':
+                hopt = true;
+                break;
+
+            // MLCAD ini file output
+            case 'm':
+                mopt = true;
+                break;
+
+            // Output official LDraw format
+            case 'l':
+                lopt = true;
+                break;
+
+            // Executable path
+            case 'p':
+                popt = true;
+                break;
+
+            // Custom configuration file
+            case 'c':
+                copt = true;
+                config_file = optarg;
+                break;
+            default:
+                break;
+        }
+    }
+
+    // lsynth config
+    if (copt) {
+        if (parse_descr(true, config_file)) {
+            return 1;
+        }
+    }
+
+    else {
+        if (parse_descr(false, argv[0])) {
+            return 1;
+        }
+    }
+
+    // handle arguments
+    // These ones are incompatible with Bricksmith integration via stdin/out
+    if (!useSTDIN_STDOUT) {
+        if (vopt && !mopt) {
+            printf("LSynth version %s%s by Kevin Clague, kevin_clague@yahoo.com\n\n",version,beta);
+        }
+
+        if (hopt && !mopt) {
+            usage();
+        }
+
+        if (popt && !mopt) {
+            printf("LSynth executable path: %s", argv[0]);
+        }
+
+        // MLCad .ini file only makes sense on a Windows platform.
+        // You could argue that any LSynth should be able to do this, regardless of platform
+        // I'd then encourage you to improve this code.
+        if (mopt) {
+#ifdef WIN32
+            char path[256];
+            char *l,*p;
+            int i;
+
+            strcpy(path,argv[0]);
+
+            // LSynth on Windows lives under ...\LSynth\bin\lsynthcp
+            // This strips the path back to ...\LSynth
+            for (i = 0; i < 2; i++) {
+                for (p = path; *p; p++) {
+                    printf("p: %i, l: %i\n", p, l);
+                    if (*p == '\\') {
+                        l = p;
+                    }
+                }
+                *l = '\0';
+            }
+
+            printf("[LSYNTH]\n");
+            printf("%%PATH = \"%s\"\n",path);
+            product_ini();
+            hose_ini();
+            band_ini();
+            printf("Tangent Statement: INSIDE = SYNTH INSIDE\n");
+            printf("Tangent Statement: OUTSIDE = SYNTH OUTSIDE\n");
+            printf("Tangent Statement: CROSS = SYNTH CROSS\n");
+            printf("Visibility Statement: SHOW = SYNTH SHOW\n");
+            printf("Visibility Statement: HIDE = SYNTH HIDE\n");
+            return 1;
+#else
+            printf("WARNING: -m MLCAD .ini output only supported on Windows.  Ignoring.\n");
+#endif
+        }
+    }
+
+    if (lopt) {
+        ldraw_part = 1;
+    }
+
+    // I/O: one extra argument
+    if (optind == argc - 1) {
+        // stdin/out for both
+        if (strcmp(argv[optind], "-") == 0) {
+            dat = stdin;
+            outfile = stdout;
+            useSTDIN_STDOUT = true;
+        }
+        else {
+            printf("Problem understanding what you want for input/output.\n\n");
+            usage();
+            return -1;
+        }
+    }
+
+    // I/O: two extra arguments
+    else if (optind == argc - 2) {
+        printf("%i %s", optind, argv[optind]);
+        dat = fopen(argv[optind],"r");
+        outfile = fopen(argv[optind + 1],"w");
+
+        if (dat == NULL) {
+            printf("%s: Failed to open file %s for reading\n",argv[0],dat_name);
+            return -1;
+        }
+
+        if (outfile == NULL) {
+            printf("%s: Failed to open file %s for writing\n",argv[0],dst_name);
+            return -1;
+        }
+    }
+
+    // Too many/not enough extra args
+    else {
+        printf("WARNING: You must tell lsynth about input and output files.\n");
+        usage();
+        return -1;
+    }
 
   /*
    * Scan the input file looking for synthesis specifications
@@ -1112,7 +1199,7 @@ int main(int argc, char* argv[])
 
   while (L3fgets(line,sizeof(line), dat)) {
 
-    int t1;
+    //int t1;
 
     nonwhite = line + strspn(line, " \t");
     strclean(nonwhite);
@@ -1149,7 +1236,13 @@ int main(int argc, char* argv[])
           synth_name = strdup(filename);
         }
 
-        synthfile = fopen(synth_name,"w");
+        /* Even if we're outputting to multiple files, if the user wants it on 
+        stdout, give it to them */
+        if (useSTDIN_STDOUT) {
+          synthfile = stdout;
+        } else {
+          synthfile = fopen(synth_name,"w");
+        }
         if (synthfile == NULL) {
           printf("%s: Failed to open file %s for writing\n",argv[0],synth_name);
           return -1;
@@ -1204,11 +1297,13 @@ int main(int argc, char* argv[])
         printf("Unknown synthesis type %s\n",nonwhite);
       }
 
-      if (product) {
-        fprintf(outfile,"0 LPUB PLI END\n");
-        printf("Synthesized %s (%s)\n",product,product_nickname(product));
-      } else {
-        printf("Synthesized %s\n",method);
+      if (! useSTDIN_STDOUT) {
+        if (product) {
+          fprintf(outfile,"0 LPUB PLI END\n");
+          printf("Synthesized %s (%s)\n",product,product_nickname(product));
+        } else {
+          printf("Synthesized %s\n",method);
+        }
       }
 
       // Close subfile and cleanup
@@ -1243,842 +1338,4 @@ int main(int argc, char* argv[])
   printf("lynthcp complete\n");
   return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
