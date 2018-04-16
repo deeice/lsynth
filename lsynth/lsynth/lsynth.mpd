@@ -312,6 +312,8 @@
 1 24 0 0 0 1 0 0 0 1 0 0 0 1 30285.DAT
 0 // Wheel 30.4 x 14 with Holes on Both Sides
 1 21 0 0 0 1 0 0 0 1 0 0 0 1 55981.dat
+0 // Plate 2 x 2 with Wheel Holder
+1 6 0 -5 28 0 0 1 0 1 0 -1 0 0 4488.dat
 0 SYNTH END
 0 
 0 
