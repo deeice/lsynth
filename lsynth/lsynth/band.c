@@ -988,10 +988,16 @@ showconstraints(
   int                  color)
 {
 #if 1
-  int i;
+  int i,j;
 
+  j = color;
+  fprintf(output, "0 Start %d ShowConstraints %d.\n", n_constraints, j);
   for (i = 0; i < n_constraints; i++) {
     part_t *cp = &constraints[i].part;
+    if (i+1 == n_constraints){ // Toggle transparency for last constraint.
+      if (color < 32) color += 32;
+      else color -= 32;
+    }
     output_line(
       output,
       0,
@@ -1003,6 +1009,7 @@ showconstraints(
       cp->orient[2][0],cp->orient[2][1],cp->orient[2][2],
       cp->type);
   }
+  fprintf(output, "0 End %d ShowConstraints %d.\n", n_constraints, j);
 
   fflush(output);
 #endif
@@ -1017,7 +1024,7 @@ rotate_constraints(
   int i;
   PRECISION t[3][3];
 
-  for (i = 0; i < n_constraints-1; i++) {
+  for (i = 0; i < n_constraints; i++) {
     vectorrot(constraints[i].part.offset,m);
     matrixcp(t,constraints[i].part.orient);
     matrixmult3(constraints[i].part.orient,m,t);
@@ -1177,7 +1184,7 @@ synth_band(
 
   rotate_constraints(constraints,n_constraints,inv);
 
-  // showconstraints(output,constraints,n_constraints,4);
+  //showconstraints(output,constraints,n_constraints,4);
 
   /* 3. bring the assembly into the X/Y plane (necessary for first constraints
    *    who's gear plane is different that the default gear plane used by
@@ -1189,7 +1196,7 @@ synth_band(
 
   //showconstraints(output,constraints,n_constraints,15);
 
-  /* 4. Now that the whole assembly is in AN the X/Y plane, move everything
+  /* 4. Now that the whole assembly is in the X/Y plane, move everything
    *    so the center of the axle of the first constraint is at the origin.
    *    With the current list of band constraints that means maybe adjusting 
    *    the Z Coordinates.
@@ -1217,6 +1224,15 @@ synth_band(
   for (i = 1; i < n_constraints; i++) { // Start at constraint 1, not 0.
     if (constraints[i].radius) {
       vectoradd(constraints[i].part.offset,
+        band_constraints[constraints[i].band_constraint_n].offset);
+      constraints[i].part.offset[2] = 0; // Set Z to zero, just in case.
+    }
+  }
+#else
+  // Must SUBTRACT the the offsets for ALL constraints including constraint 0 
+  for (i = 0; i < n_constraints; i++) { // Start at constraint 0
+    if (constraints[i].radius) {
+      vectorsub(constraints[i].part.offset,
         band_constraints[constraints[i].band_constraint_n].offset);
       constraints[i].part.offset[2] = 0; // Set Z to zero, just in case.
     }
@@ -1298,10 +1314,14 @@ synth_band(
 
 
 #ifdef SHOW_XY_PLANE_FOR_DEBUG
+  fprintf(output, "0 Start %d Show_XY %d.\n", n_constraints, 3);
   for (i = 0; i < n_constraints-1; i++) {
     part_t *cp = &constraints[i].part;
     LSL_band_constraint *k = &constraints[i];
     int color = 4;
+    fprintf(output, "2 3 %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f\n",
+	    k->start_line[0], k->start_line[1], k->start_line[2],
+	    k->end_line[0], k->end_line[1], k->end_line[2]);
     output_line(
       output,
       0,
@@ -1326,6 +1346,7 @@ synth_band(
       cp->orient[2][0],cp->orient[2][1],cp->orient[2][2],
       "LS02.dat");
   }
+  fprintf(output, "0 End %d Show_XY %d.\n", n_constraints, 3);
 #endif
 
 
