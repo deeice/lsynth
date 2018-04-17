@@ -987,17 +987,14 @@ showconstraints(
   int                  n_constraints,
   int                  color)
 {
-#if 1
   int i,j;
 
   j = color;
   fprintf(output, "0 Start %d ShowConstraints %d.\n", n_constraints, j);
   for (i = 0; i < n_constraints; i++) {
     part_t *cp = &constraints[i].part;
-    if (i+1 == n_constraints){ // Toggle transparency for last constraint.
-      if (color < 32) color += 32;
-      else color -= 32;
-    }
+    if (i+1 == n_constraints) // Toggle transparency for last constraint.
+      color ^= 32;
     output_line(
       output,
       0,
@@ -1010,9 +1007,29 @@ showconstraints(
       cp->type);
   }
   fprintf(output, "0 End %d ShowConstraints %d.\n", n_constraints, j);
-
   fflush(output);
-#endif
+}
+
+void
+showconstraintaxis(
+  FILE                *output,
+  LSL_band_constraint *constraints,
+  int                  n_constraints,
+  int                  color)
+{
+  int i,j;
+
+  j = color;
+  fprintf(output, "0 Start %d ShowConstraintAxis %d.\n", n_constraints, j);
+  for (i = 0; i < n_constraints; i++) {
+    part_t *cp = &constraints[i].part;
+    if (i+1 == n_constraints) // Toggle transparency for last constraint.
+      color ^= 32;
+    fprintf(output, "2 %d %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f\n", color,
+	    cp->offset[0], cp->offset[1], -100.0f, cp->offset[0], cp->offset[1], 100.0f);
+  }
+  fprintf(output, "0 End %d ShowConstraintAxis %d.\n", n_constraints, j);
+  fflush(output);
 }
 
 static void
@@ -1271,7 +1288,8 @@ synth_band(
   }
 #endif
 #ifdef SHOW_XY_PLANE_FOR_DEBUG
-  showconstraints(output,constraints,n_constraints,3);
+  // Show rotation axis for the constraints to make sure offsets worked above.
+  showconstraintaxis(output,constraints,n_constraints,4);
 #endif
 
   /* figure out the tangents' intersections with circles */
