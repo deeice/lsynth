@@ -1209,6 +1209,8 @@ synth_band(
     }
   }
 
+  //showconstraints(output,constraints,n_constraints,15);
+  
 #if 0
   /* 5. Offset constraints that were not modeled at the orgin (or on an axis).
    *    
@@ -1229,11 +1231,23 @@ synth_band(
     }
   }
 #else
-  // Must SUBTRACT the the offsets for ALL constraints including constraint 0 
+  // Must SUBTRACT the the offsets for ALL constraints including constraint 0
+  //
+  // But this only works if all the modeled constraints have the same rotation matrix.
+  // Need to rotate the lsynth.mpd band_constraint offsets by the model matrix for
+  // each modeled constraint before doing the vectorsub.
+  //
+  //printf("\n");
+  matrixinv(inv,constraints[first].part.orient);
   for (i = 0; i < n_constraints; i++) { // Start at constraint 0
     if (constraints[i].radius) {
-      vectorsub(constraints[i].part.offset,
-        band_constraints[constraints[i].band_constraint_n].offset);
+      PRECISION rotoffset[3];
+      vectorcp(rotoffset,band_constraints[constraints[i].band_constraint_n].offset);
+      //printf("%d:    offset(%1.4f, %1.4f, %1.4f)\n",i, rotoffset[0],rotoffset[1],rotoffset[2]);
+      vectorrot(rotoffset,inv);
+      vectorrot(rotoffset,constraints[i].part.orient);
+      //printf("%d: rotoffset(%1.4f, %1.4f, %1.4f)\n",i, rotoffset[0],rotoffset[1],rotoffset[2]);
+      vectorsub(constraints[i].part.offset,rotoffset);
       constraints[i].part.offset[2] = 0; // Set Z to zero, just in case.
     }
   }
